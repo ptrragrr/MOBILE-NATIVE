@@ -1,75 +1,401 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+// Format Rupiah Function
+const formatRupiah = (amount) => {
+  const number = typeof amount === 'string' ? parseFloat(amount) : amount;
+  if (isNaN(number)) return 'Rp 0';
+  try {
+    return 'Rp ' + number.toLocaleString('id-ID');
+  } catch (error) {
+    const formatted = number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return 'Rp ' + formatted;
+  }
+};
 
-export default function HomeScreen() {
+export default function Dashboard() {
+  // Sample data
+  const todaySales = 2450000;
+  const todayTransactions = 47;
+  const totalProducts = 156;
+
+  const recentTransactions = [
+    { id: '#001', time: '14:30', amount: 125000, items: 3, customer: 'Ahmad S.' },
+    { id: '#002', time: '14:15', amount: 85000, items: 2, customer: 'Sari M.' },
+    { id: '#003', time: '13:45', amount: 165000, items: 5, customer: 'Budi P.' },
+    { id: '#004', time: '13:20', amount: 95000, items: 2, customer: 'Lisa A.' },
+  ];
+
+  const topProducts = [
+    { name: 'Kopi Arabica', sales: 45, revenue: 1125000 },
+    { name: 'Teh Hijau', sales: 32, revenue: 480000 },
+    { name: 'Susu UHT', sales: 28, revenue: 224000 },
+    { name: 'Roti Tawar', sales: 23, revenue: 115000 },
+  ];
+
+  const salesData = [
+    { day: 'Sen', amount: 1800000 },
+    { day: 'Sel', amount: 2200000 },
+    { day: 'Rab', amount: 1950000 },
+    { day: 'Kam', amount: 2450000 },
+    { day: 'Jum', amount: 2100000 },
+    { day: 'Sab', amount: 2800000 },
+    { day: 'Min', amount: 2300000 },
+  ];
+
+  const maxSales = Math.max(...salesData.map(d => d.amount));
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.title}>Dashboard POS</Text>
+          <Text style={styles.subtitle}>
+            Toko Sejahtera - {new Date().toLocaleDateString('id-ID', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
             })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+          </Text>
+        </View>
+        <View style={styles.rightHeader}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>A</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Main Content */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Stats Cards */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{formatRupiah(todaySales)}</Text>
+            <Text style={styles.statLabel}>Penjualan Hari Ini</Text>
+            <Text style={styles.statIcon}>💰</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{todayTransactions}</Text>
+            <Text style={styles.statLabel}>Transaksi</Text>
+            <Text style={styles.statIcon}>🛒</Text>
+          </View>
+        </View>
+
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{totalProducts}</Text>
+            <Text style={styles.statLabel}>Total Produk</Text>
+            <Text style={styles.statIcon}>📦</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>4.8/5</Text>
+            <Text style={styles.statLabel}>Rating Toko</Text>
+            <Text style={styles.statIcon}>⭐</Text>
+          </View>
+        </View>
+
+        {/* Sales Chart */}
+        <View style={styles.chartContainer}>
+          <Text style={styles.sectionTitle}>Penjualan Mingguan</Text>
+          <View style={styles.chart}>
+            {salesData.map((item, index) => (
+              <View key={index} style={styles.chartItem}>
+                <View 
+                  style={[
+                    styles.chartBar, 
+                    { height: (item.amount / maxSales) * 120 }
+                  ]} 
+                />
+                <Text style={styles.chartDay}>{item.day}</Text>
+                <Text style={styles.chartAmount}>
+                  {formatRupiah(item.amount).replace('Rp ', '').substring(0, 4)}K
+                </Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Recent Transactions */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Transaksi Terbaru</Text>
+          {recentTransactions.map((transaction, index) => (
+            <View key={index} style={styles.transactionItem}>
+              <View style={styles.transactionLeft}>
+                <Text style={styles.transactionId}>{transaction.id}</Text>
+                <Text style={styles.transactionTime}>{transaction.time}</Text>
+              </View>
+              <View style={styles.transactionCenter}>
+                <Text style={styles.transactionCustomer}>{transaction.customer}</Text>
+                <Text style={styles.transactionItems}>{transaction.items} items</Text>
+              </View>
+              <View style={styles.transactionRight}>
+                <Text style={styles.transactionAmount}>{formatRupiah(transaction.amount)}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Top Products */}
+        <View style={styles.sectionContainer}>
+          <Text style={styles.sectionTitle}>Produk Terlaris</Text>
+          {topProducts.map((product, index) => (
+            <View key={index} style={styles.productItem}>
+              <View style={styles.productRank}>
+                <Text style={styles.productRankText}>{index + 1}</Text>
+              </View>
+              <View style={styles.productInfo}>
+                <Text style={styles.productName}>{product.name}</Text>
+                <Text style={styles.productSales}>{product.sales} terjual</Text>
+              </View>
+              <View style={styles.productRevenue}>
+                <Text style={styles.productRevenueText}>{formatRupiah(product.revenue)}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Footer Padding */}
+        <View style={styles.footerPadding} />
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>© 2024 Toko Sejahtera - POS System v1.0.0</Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF1F2',
+  },
+  header: {
+    marginTop: 50,
+    marginBottom: 20,
+    marginHorizontal: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  subtitle: {
+    marginTop: 4,
+    color: '#4B5563',
+    fontSize: 14,
+  },
+  rightHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
+  bellText: {
+    fontSize: 16,
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FB7185',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 4,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  statIcon: {
+    fontSize: 24,
+  },
+  chartContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 16,
+  },
+  chart: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    height: 160,
+  },
+  chartItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  chartBar: {
+    width: 20,
+    backgroundColor: '#FB7185',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  chartDay: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  chartAmount: {
+    fontSize: 10,
+    color: '#6B7280',
+  },
+  sectionContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  transactionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  transactionLeft: {
+    flex: 1,
+  },
+  transactionId: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  transactionTime: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  transactionCenter: {
+    flex: 2,
+    paddingHorizontal: 8,
+  },
+  transactionCustomer: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  transactionItems: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  transactionRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  transactionAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#059669',
+  },
+  productItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  productRank: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FB7185',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  productRankText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  productSales: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  productRevenue: {
+    alignItems: 'flex-end',
+  },
+  productRevenueText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#059669',
+  },
+  footerPadding: {
+    height: 20,
+  },
+  footer: {
+    padding: 16,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  footerText: {
+    color: '#9CA3AF',
+    fontSize: 12,
   },
 });
