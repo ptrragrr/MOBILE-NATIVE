@@ -1,12 +1,40 @@
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Slot } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider } from '../context/AuthContext';
+import { useContext, useEffect } from 'react';
+import { AuthContext, AuthProvider } from '../context/AuthContext';
 
-export default function RootLayout() {
+// ⬅️ Layout internal yang punya akses AuthContext
+function MainLayout() {
   const colorScheme = useColorScheme();
+  const router = useRouter();
+  const segments = useSegments();
+  const { isLoggedIn } = useContext(AuthContext);
+
+  useEffect(() => {
+    const inAuthGroup = segments[0] === 'AuthStack';
+
+    if (!isLoggedIn && !inAuthGroup) {
+      router.replace('/AuthStack/LoginScreen');
+    }
+
+    // if (isLoggedIn && inAuthGroup) {
+    //   router.replace('/(tabs)/Dashboard');
+    // }
+  }, [isLoggedIn, segments]);
+
+  return (
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Slot />
+      <StatusBar style="auto" />
+    </ThemeProvider>
+  );
+}
+
+// ⬅️ Bungkus provider DI LUAR MainLayout
+export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -14,11 +42,8 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AuthProvider>
-        <Slot />
-        <StatusBar style="auto" />
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <MainLayout />
+    </AuthProvider>
   );
 }

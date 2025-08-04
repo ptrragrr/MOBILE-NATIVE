@@ -5,10 +5,15 @@ type AuthContextType = {
   setIsLoggedIn: (value: boolean) => void;
 };
 
-export const AuthContext = createContext<AuthContextType>({
+export const AuthContext = createContext({
   isLoggedIn: false,
-  setIsLoggedIn: () => {},
+  setIsLoggedIn: (value: boolean) => {},
 });
+
+// export const AuthContext = createContext<AuthContextType>({
+//   isLoggedIn: false,
+//   setIsLoggedIn: () => {},
+// });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
