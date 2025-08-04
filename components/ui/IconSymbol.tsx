@@ -17,6 +17,7 @@ const MAPPING = {
   'house.fill': 'home',
   'product.fill': 'inventory',
   'transaksi.fill': 'inventory',
+  'profile.fill': 'inventory',
   'paperplane.fill': 'send',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',

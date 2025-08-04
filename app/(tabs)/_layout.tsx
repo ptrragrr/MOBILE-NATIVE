@@ -46,6 +46,12 @@ export default function TabLayout() {
           title: 'Transaksi',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="transaksi.fill" color={color} />,
         }}
+      /><Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="profile.fill" color={color} />,
+        }}
       />
       <Tabs.Screen
         name="explore"
@@ -55,5 +61,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    
   );
 }

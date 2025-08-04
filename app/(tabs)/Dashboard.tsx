@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import React, { useContext } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useContext, useState } from 'react';
+import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 
 const formatRupiah = (amount) => {
@@ -17,10 +17,20 @@ const formatRupiah = (amount) => {
 export default function Dashboard() {
   const router = useRouter();
   const { setIsLoggedIn } = useContext(AuthContext);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogoutPress = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
     setIsLoggedIn(false);
-    router.replace('/AuthStack/LoginScreen'); // ganti dengan path login kamu
+    router.replace('/AuthStack/LoginScreen');
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutModal(false);
   };
 
   const todaySales = 2450000;
@@ -69,9 +79,13 @@ export default function Dashboard() {
           </Text>
         </View>
         <View style={styles.rightHeader}>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
+          <TouchableOpacity 
+  onPress={() => router.push('/profile')}
+  style={styles.profileButton}
+  activeOpacity={0.8}
+>
+  <Text style={styles.profileIcon}>👤</Text>
+</TouchableOpacity>
         </View>
       </View>
 
@@ -166,6 +180,64 @@ export default function Dashboard() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>© 2024 Toko Sejahtera - POS System v1.0.0</Text>
       </View>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showLogoutModal}
+        onRequestClose={handleCancelLogout}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Icon Header */}
+            <View style={styles.modalIconContainer}>
+              <View style={styles.modalIconCircle}>
+                <Text style={styles.modalIcon}>👋</Text>
+              </View>
+            </View>
+            
+            {/* Content */}
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Sampai Jumpa!</Text>
+              <Text style={styles.modalSubtitle}>
+                Yakin ingin keluar dari Dashboard POS?
+              </Text>
+              <Text style={styles.modalMessage}>
+                Data Anda akan tersimpan dengan aman dan bisa diakses kembali saat login.
+              </Text>
+            </View>
+            
+            {/* Action Buttons */}
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.stayButton} 
+                onPress={handleCancelLogout}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.stayButtonIcon}>🏠</Text>
+                <Text style={styles.stayButtonText}>Tetap Disini</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.logoutConfirmButton} 
+                onPress={handleConfirmLogout}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.logoutButtonIcon}>🚪</Text>
+                <Text style={styles.logoutConfirmButtonText}>Ya, Keluar</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Decorative Elements */}
+            <View style={styles.decorativeElements}>
+              <View style={[styles.decorativeDot, { backgroundColor: '#FB7185' }]} />
+              <View style={[styles.decorativeDot, { backgroundColor: '#F59E0B' }]} />
+              <View style={[styles.decorativeDot, { backgroundColor: '#10B981' }]} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -262,5 +334,157 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#9CA3AF', fontSize: 12,
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  profileButton: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: '#F3F4F6',
+  alignItems: 'center',
+  justifyContent: 'center',
+  elevation: 2,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+},
+profileIcon: {
+  fontSize: 20,
+},
+  modalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 380,
+    elevation: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  modalIconContainer: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 16,
+    background: 'linear-gradient(135deg, #FFF1F2 0%, #FDF2F8 100%)',
+  },
+  modalIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FB7185',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#FB7185',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  modalIcon: {
+    fontSize: 36,
+  },
+  modalContent: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    gap: 12,
+  },
+  stayButton: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  stayButtonIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  stayButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  logoutConfirmButton: {
+    flex: 1,
+    backgroundColor: '#EF4444',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  logoutButtonIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  logoutConfirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  decorativeElements: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingBottom: 20,
+    gap: 8,
+  },
+  decorativeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
 });
