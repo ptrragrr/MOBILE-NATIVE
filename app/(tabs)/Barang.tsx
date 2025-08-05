@@ -1,11 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Picker } from '@react-native-picker/picker';
 import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
@@ -21,6 +19,101 @@ import {
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
+
+// Custom Select2-like Component
+const CustomSelect = ({ data, selectedValue, onSelect, placeholder, loading }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredData = data.filter(item => 
+    item.nama.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const selectedItem = data.find(item => item.id.toString() === selectedValue);
+  
+  return (
+    <>
+      <TouchableOpacity 
+        style={styles.customSelectButton} 
+        onPress={() => setModalVisible(true)}
+        disabled={loading}
+      >
+        <Text style={[
+          styles.customSelectText, 
+          !selectedItem && styles.customSelectPlaceholder
+        ]}>
+          {loading ? 'Memuat...' : (selectedItem ? selectedItem.nama : placeholder)}
+        </Text>
+        <Text style={styles.customSelectArrow}>
+          {loading ? '⏳' : '▼'}
+        </Text>
+      </TouchableOpacity>
+      
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.selectModalContainer}>
+          <View style={styles.selectModalHeader}>
+            <Text style={styles.selectModalTitle}>Pilih Kategori</Text>
+            <TouchableOpacity 
+              onPress={() => setModalVisible(false)}
+              style={styles.selectModalClose}
+            >
+              <Text style={styles.selectModalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.selectSearchContainer}>
+            <Text style={styles.selectSearchIcon}>🔍</Text>
+            <TextInput
+              style={styles.selectSearchInput}
+              placeholder="Cari kategori..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#999"
+            />
+          </View>
+          
+          <FlatList
+            data={filteredData}
+            keyExtractor={item => item.id.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.selectOptionItem,
+                  selectedValue === item.id.toString() && styles.selectOptionSelected
+                ]}
+                onPress={() => {
+                  onSelect(item.id.toString());
+                  setModalVisible(false);
+                  setSearchQuery('');
+                }}
+              >
+                <Text style={[
+                  styles.selectOptionText,
+                  selectedValue === item.id.toString() && styles.selectOptionTextSelected
+                ]}>
+                  {item.nama}
+                </Text>
+                {selectedValue === item.id.toString() && (
+                  <Text style={styles.selectOptionCheck}>✓</Text>
+                )}
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={() => (
+              <View style={styles.selectEmptyContainer}>
+                <Text style={styles.selectEmptyText}>Kategori tidak ditemukan</Text>
+              </View>
+            )}
+          />
+        </View>
+      </Modal>
+    </>
+  );
+};
 
 export default function BarangManagement() {
   const [barang, setBarang] = useState([]);
@@ -45,7 +138,7 @@ export default function BarangManagement() {
   const filterCategories = ['Semua'];
   const [filteredBarang, setFilteredBarang] = useState([]);
 
-  const BASE_URL = 'https://fcda10aff9bc.ngrok-free.app/api';
+  const BASE_URL = ' https://fadf50ca5131.ngrok-free.app/api/tambah';
 
   useEffect(() => {
     fetchBarang();
@@ -348,25 +441,13 @@ export default function BarangManagement() {
 
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>🏷️ Kategori</Text>
-                {loadingKategori ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="small" color="#667eea" />
-                    <Text style={styles.loadingText}>Memuat kategori...</Text>
-                  </View>
-                ) : (
-                  <View style={styles.pickerContainer}>
-                    <Picker
-                      selectedValue={barangForm.kategori}
-                      onValueChange={(value) => setBarangForm({ ...barangForm, kategori: value })}
-                      style={styles.picker}
-                    >
-                      <Picker.Item label="Pilih Kategori" value="" />
-                      {categoriesApi.map(cat => (
-                        <Picker.Item key={cat.id} label={cat.nama} value={cat.id.toString()} />
-                      ))}
-                    </Picker>
-                  </View>
-                )}
+                <CustomSelect 
+                  data={categoriesApi}
+                  selectedValue={barangForm.kategori}
+                  onSelect={(value) => setBarangForm({ ...barangForm, kategori: value })}
+                  placeholder="Pilih Kategori"
+                  loading={loadingKategori}
+                />
               </View>
 
               <View style={styles.inputRow}>
@@ -773,5 +854,130 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  
+  // Custom Select2-like Styles
+  customSelectButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  customSelectText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  customSelectPlaceholder: {
+    color: '#999',
+  },
+  customSelectArrow: {
+    fontSize: 12,
+    color: '#7f8c8d',
+    marginLeft: 8,
+  },
+  selectModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  selectModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    paddingTop: StatusBar.currentHeight + 16 || 60,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  selectModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  selectModalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectModalCloseText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    fontWeight: '600',
+  },
+  selectSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    margin: 20,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  selectSearchIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  selectSearchInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: '#2c3e50',
+  },
+  selectOptionItem: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectOptionSelected: {
+    backgroundColor: '#e3f2fd',
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
+  },
+  selectOptionText: {
+    fontSize: 16,
+    color: '#2c3e50',
+    flex: 1,
+  },
+  selectOptionTextSelected: {
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  selectOptionCheck: {
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  selectEmptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  selectEmptyText: {
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
   },
 });

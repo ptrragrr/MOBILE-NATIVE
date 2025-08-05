@@ -14,6 +14,8 @@ function MainLayout() {
   const { isLoggedIn } = useContext(AuthContext);
 
   useEffect(() => {
+    if (segments.length === 0) return; // 🛑 Pastikan segmen sudah siap
+
     const inAuthGroup = segments[0] === 'AuthStack';
 
     if (!isLoggedIn && !inAuthGroup) {
@@ -32,6 +34,32 @@ function MainLayout() {
     </ThemeProvider>
   );
 }
+
+// function MainLayout() {
+//   const colorScheme = useColorScheme();
+//   const router = useRouter();
+//   const segments = useSegments();
+//   const { isLoggedIn } = useContext(AuthContext);
+
+//   useEffect(() => {
+//     const inAuthGroup = segments[0] === 'AuthStack';
+
+//     if (!isLoggedIn && !inAuthGroup) {
+//       router.replace('/AuthStack/LoginScreen');
+//     }
+
+//     // if (isLoggedIn && inAuthGroup) {
+//     //   router.replace('/(tabs)/Dashboard');
+//     // }
+//   }, [isLoggedIn, segments]);
+
+//   return (
+//     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+//       <Slot />
+//       <StatusBar style="auto" />
+//     </ThemeProvider>
+//   );
+// }
 
 // ⬅️ Bungkus provider DI LUAR MainLayout
 export default function RootLayout() {
