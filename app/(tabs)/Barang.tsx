@@ -192,7 +192,7 @@ export default function BarangManagement() {
         return;
       }
 
-      const res = await axios.get(`${BASE_URL}/tambah/kategori`, {
+      const res = await axios.get(`${BASE_URL}/kategori`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -253,7 +253,7 @@ export default function BarangManagement() {
     }
 
     try {
-      await axios.post(`https://fcda10aff9bc.ngrok-free.app/api/tambah/barang/store`, formData, {
+      await axios.post(` https://fadf50ca5131.ngrok-free.app/api/tambah/barang/store`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchBarang();
