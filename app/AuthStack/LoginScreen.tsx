@@ -9,6 +9,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -25,162 +26,192 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [focusedInput, setFocusedInput] = useState('');
   const router = useRouter();
 
-const handleLogin = async () => {
-  if (!username || !password) {
-    Alert.alert('Error', 'Username dan password harus diisi');
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const response = await axios.post(
-      'https://fcda10aff9bc.ngrok-free.app/api/auth/login',
-      { email: username, password }
-    );
-
-    if (response.data.status) {
-      const token = response.data.token; // pastikan backend balikin token JWT
-      await AsyncStorage.setItem('token', token); // simpan token
-
-      console.log('Login success:', response.data);
-      setIsLoggedIn(true);
-      router.replace('/Dashboard');
-    } else {
-      Alert.alert('Error', response.data.message || 'Login gagal');
+  const handleLogin = async () => {
+    if (!username || !password) {
+      Alert.alert('Error', 'Username dan password harus diisi');
+      return;
     }
-  } catch (error) {
-    console.error('Login error:', error.response?.data || error.message);
-    Alert.alert('Error', error.response?.data?.message || 'Terjadi kesalahan server');
-  } finally {
-    setLoading(false);
-  }
-};
 
+    setLoading(true);
 
-//   const handleLogin = async () => {
-//   if (!username || !password) {
-//     Alert.alert('Error', 'Username dan password harus diisi');
-//     return;
-//   }
+    try {
+      const response = await axios.post(
+        'https://fcda10aff9bc.ngrok-free.app/api/auth/login',
+        { email: username, password }
+      );
 
-//   setLoading(true);
+      if (response.data.status) {
+        const token = response.data.token;
+        await AsyncStorage.setItem('token', token);
 
-//   try {
-//     const response = await axios.post(
-//   'http://192.168.137.26:8000/api/auth/login',
-//   { 
-//     email: username,
-//     password: password,
-//   }
-// );
-
-//     // Misal backend ngirim token atau user data
-//     console.log('Login success:', response.data);
-
-//     setIsLoggedIn(true);
-//     router.replace('/(tabs)/index');
-//   } catch (error) {
-//     console.error('Login faile:', error);
-//     Alert.alert('Error', 'Login gagal. Cek username atau password.');
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-  // const handleLogin = () => {
-  //   if (!username || !password) {
-  //     Alert.alert('Error', 'Username dan password harus diisi');
-  //     return;
-  //   }
-
-  //   setLoading(true);
-    
-  //   // Simulasi loading
-  //   setTimeout(() => {
-  //     if (username === 'admin' && password === 'admin') {
-  //       setIsLoggedIn(true);
-  //       router.replace('/(tabs)/Dashboard');
-  //     } else {
-  //       Alert.alert('Error', 'Username atau password salah');
-  //     }
-  //     setLoading(false);
-  //   }, 1000);
-  // };
+        console.log('Login success:', response.data);
+        
+        // Pop-up berhasil login
+        Alert.alert(
+          '🎉 Berhasil!',
+          'Anda berhasil login',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setIsLoggedIn(true);
+                router.replace('/Dashboard');
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert('Error', response.data.message || 'Login gagal');
+      }
+    } catch (error) {
+      console.error('Login error:', error.response?.data || error.message);
+      Alert.alert('Error', error.response?.data?.message || 'Terjadi kesalahan server');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={['#667eea', '#764ba2', '#f093fb']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        <View style={styles.content}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.welcomeText}>Selamat Datang</Text>
-            <Text style={styles.subtitle}>Masuk ke akun Anda</Text>
-          </View>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          scrollEnabled={true}
+        >
+          <View style={styles.content}>
+            {/* Decorative Elements */}
+            <View style={styles.decorativeCircle1} />
+            <View style={styles.decorativeCircle2} />
+            <View style={styles.decorativeCircle3} />
 
-          {/* Form Container */}
-          <View style={styles.formContainer}>
-            <View style={styles.form}>
-              {/* Username Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Username</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Masukkan username"
-                  placeholderTextColor="#999"
-                  value={username}
-                  onChangeText={setUsername}
-                  autoCapitalize="none"
-                />
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <View style={styles.logo}>
+                  <Text style={styles.logoText}>🚀</Text>
+                </View>
               </View>
+              <Text style={styles.welcomeText}>Selamat Datang Kembali!</Text>
+              <Text style={styles.subtitle}>Login untuk melanjutkan pekerjaanmu</Text>
+            </View>
 
-              {/* Password Input */}
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Masukkan password"
-                  placeholderTextColor="#999"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                />
-              </View>
-
-              {/* Login Button */}
-              <TouchableOpacity
-                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-                onPress={handleLogin}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <LinearGradient
-                  colors={loading ? ['#ccc', '#999'] : ['#667eea', '#764ba2']}
-                  style={styles.buttonGradient}
-                >
-                  <Text style={styles.loginButtonText}>
-                    {loading ? 'Memuat...' : 'Masuk'}
+            {/* Form Container */}
+            <View style={styles.formContainer}>
+              <View style={styles.form}>
+                {/* Username Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={[
+                    styles.inputLabel,
+                    focusedInput === 'username' && styles.inputLabelFocused
+                  ]}>
+                    Username
                   </Text>
-                </LinearGradient>
-              </TouchableOpacity>
+                  <TextInput
+                    style={[
+                      styles.inputSimple,
+                      focusedInput === 'username' && styles.inputSimpleFocused
+                    ]}
+                    placeholder="Masukkan username"
+                    placeholderTextColor="#a0a0a0"
+                    value={username}
+                    onChangeText={setUsername}
+                    onFocus={() => setFocusedInput('username')}
+                    onBlur={() => setFocusedInput('')}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="next"
+                    editable={true}
+                  />
+                </View>
 
+                {/* Password Input */}
+                <View style={styles.inputContainer}>
+                  <Text style={[
+                    styles.inputLabel,
+                    focusedInput === 'password' && styles.inputLabelFocused
+                  ]}>
+                    Password
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.inputSimple,
+                      focusedInput === 'password' && styles.inputSimpleFocused
+                    ]}
+                    placeholder="Masukkan password"
+                    placeholderTextColor="#a0a0a0"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => setFocusedInput('')}
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={handleLogin}
+                    editable={true}
+                  />
+                </View>
 
+                {/* Login Button */}
+                <TouchableOpacity
+                  style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                  onPress={handleLogin}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={loading ? ['#e0e0e0', '#bdbdbd'] : ['#667eea', '#764ba2']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.buttonGradient}
+                  >
+                    <Text style={styles.loginButtonText}>
+                      {loading ? '⏳ Loading...' : 'Login'}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View style={styles.divider}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>or</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                {/* Additional Options */}
+                <View style={styles.additionalOptions}>
+                  <TouchableOpacity style={styles.optionButton}>
+                    <Text style={styles.optionText}>Forgot Password?</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                Secure • Reliable • Fast
+              </Text>
+              <Text style={styles.copyrightText}>
+                © 2024 Your App Name
+              </Text>
             </View>
           </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>© 2024 Your App Name</Text>
-          </View>
-        </View>
+        </ScrollView>
       </LinearGradient>
     </KeyboardAvoidingView>
   );
@@ -193,80 +224,147 @@ const styles = StyleSheet.create({
   gradient: {
     flex: 1,
   },
+  scrollContainer: {
+    flexGrow: 1,
+    minHeight: height,
+  },
   content: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingTop: StatusBar.currentHeight || 44,
+    paddingBottom: 24,
   },
+  
+  // Decorative Elements
+  decorativeCircle1: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    top: 100,
+    left: -30,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  decorativeCircle3: {
+    position: 'absolute',
+    bottom: 150,
+    right: -20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+
+  // Header
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
+  logoContainer: {
+    marginBottom: 20,
+  },
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 15,
+  },
+  logoText: {
+    fontSize: 36,
+  },
   welcomeText: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: 'white',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.85)',
     textAlign: 'center',
+    fontWeight: '400',
   },
+
+  // Form
   formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    borderRadius: 28,
+    padding: 32,
+    marginHorizontal: 4,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
+    shadowOffset: { width: 0, height: 20 },
     shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-    backdropFilter: 'blur(10px)',
+    shadowRadius: 25,
+    elevation: 20,
   },
   form: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   inputLabel: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#333',
+    color: '#4a5568',
     marginBottom: 8,
+    marginLeft: 4,
+    transition: 'color 0.2s',
   },
-  input: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 15,
+  inputLabelFocused: {
+    color: '#667eea',
+  },
+  
+  // Input Styles - Simplified
+  inputSimple: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     fontSize: 16,
+    color: '#2d3748',
+    fontWeight: '500',
     borderWidth: 2,
-    borderColor: '#e1e5e9',
-    color: '#333',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: '#e2e8f0',
+    minHeight: 56,
   },
-  loginButton: {
-    borderRadius: 12,
-    marginTop: 10,
+  inputSimpleFocused: {
+    borderColor: '#667eea',
+    backgroundColor: '#ffffff',
     shadowColor: '#667eea',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
     shadowRadius: 8,
+    elevation: 4,
+  },
+
+  // Button
+  loginButton: {
+    borderRadius: 16,
+    marginTop: 8,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
     elevation: 8,
   },
   loginButtonDisabled: {
@@ -274,23 +372,65 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   buttonGradient: {
-    paddingVertical: 16,
+    paddingVertical: 18,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 16,
     alignItems: 'center',
   },
   loginButtonText: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 
+  // Divider
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e2e8f0',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    color: '#a0aec0',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // Additional Options
+  additionalOptions: {
+    alignItems: 'center',
+  },
+  optionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  optionText: {
+    color: '#667eea',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  // Footer
   footer: {
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 32,
+    paddingTop: 16,
   },
   footerText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  copyrightText: {
     color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
+    fontWeight: '400',
   },
 });
