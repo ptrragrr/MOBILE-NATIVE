@@ -34,10 +34,10 @@ export default function TabLayout() {
         }}
       />
      <Tabs.Screen
-        name="Product"
+        name="Barang"
         options={{
-          title: 'Product',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="product.fill" color={color} />,
+          title: 'Barang',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="barang.fill" color={color} />,
         }}
       />
       <Tabs.Screen

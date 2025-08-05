@@ -1,4 +1,5 @@
 // app/AuthStack/LoginScreen.tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -36,14 +37,17 @@ const handleLogin = async () => {
 
   try {
     const response = await axios.post(
-      'https://ea94467f3e21.ngrok-free.app/api/auth/login',
+      'https://fcda10aff9bc.ngrok-free.app/api/auth/login',
       { email: username, password }
     );
 
     if (response.data.status) {
+      const token = response.data.token; // pastikan backend balikin token JWT
+      await AsyncStorage.setItem('token', token); // simpan token
+
       console.log('Login success:', response.data);
       setIsLoggedIn(true);
-      router.replace('/Dashboard'); // redirect
+      router.replace('/Dashboard');
     } else {
       Alert.alert('Error', response.data.message || 'Login gagal');
     }
