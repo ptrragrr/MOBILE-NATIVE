@@ -17,6 +17,8 @@ export default function TransactionScreen() {
   const [selectedPayment, setSelectedPayment] = useState('cash');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [customerMoney, setCustomerMoney] = useState('');
+  const [Barang, setBarang] = useState([]);
+
 
   // Sample products data
   const products = [
@@ -29,6 +31,8 @@ export default function TransactionScreen() {
     { id: '7', nama: 'Donat', harga: 10000, stok: 35, foto: '🍩', kategori: 'Dessert' },
     { id: '8', nama: 'Jus Jeruk', harga: 20000, stok: 28, foto: '🍊', kategori: 'Minuman' },
   ];
+
+  
 
   const formatRupiah = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -328,10 +332,10 @@ export default function TransactionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FEA3BE',
+    backgroundColor: '#F8F9FA',
   },
   header: {
-    backgroundColor: '			#ad8698ff',
+    backgroundColor: '#495057',
     paddingTop: 50,
     paddingBottom: 20,
     paddingHorizontal: 20,
@@ -340,11 +344,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: '#FFFFFF',
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#fff',
+    color: '#FFFFFF',
     opacity: 0.9,
     marginTop: 4,
   },
@@ -352,29 +356,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   productsSection: {
-    backgroundColor: '	#F9A8D4',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     marginBottom: 8,
   },
   cartSection: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     minHeight: 400,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#411304ff',
+    color: '#212529',
     marginBottom: 12,
   },
   searchInput: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#FEA3BE',
+    borderColor: '#DEE2E6',
     fontSize: 16,
   },
   productsList: {
@@ -382,16 +386,13 @@ const styles = StyleSheet.create({
   },
   productCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     margin: 6,
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
     minHeight: 120,
     justifyContent: 'center',
   },
@@ -401,20 +402,20 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     textAlign: 'center',
-    color: '#4C2808',
+    color: '#212529',
     marginBottom: 4,
   },
   productPrice: {
-    fontSize: 12,
-    color: '#F3B5A0',
+    fontSize: 13,
+    color: '#007BFF',
     fontWeight: '600',
     marginBottom: 2,
   },
   productStock: {
-    fontSize: 10,
-    color: '#666',
+    fontSize: 11,
+    color: '#6C757D',
   },
   emptyCart: {
     height: 200,
@@ -422,7 +423,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyCartText: {
-    color: '#999',
+    color: '#6C757D',
     fontSize: 16,
   },
   cartList: {
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#F1F3F4',
   },
   cartItemInfo: {
     flex: 1,
@@ -451,11 +452,11 @@ const styles = StyleSheet.create({
   cartItemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#212529',
   },
   cartItemPrice: {
     fontSize: 12,
-    color: '#666',
+    color: '#6C757D',
   },
   quantityControls: {
     flexDirection: 'row',
@@ -465,13 +466,13 @@ const styles = StyleSheet.create({
   quantityButton: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#FEA3BE',
+    borderRadius: 4,
+    backgroundColor: '#6C757D',
     justifyContent: 'center',
     alignItems: 'center',
   },
   quantityButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 18,
   },
@@ -485,19 +486,19 @@ const styles = StyleSheet.create({
   removeButton: {
     width: 28,
     height: 28,
-    borderRadius: 14,
-    backgroundColor: '#ff6b6b',
+    borderRadius: 4,
+    backgroundColor: '#DC3545',
     justifyContent: 'center',
     alignItems: 'center',
   },
   removeButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
   },
   summary: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: '#E9ECEF',
     paddingTop: 16,
     marginBottom: 16,
   },
@@ -508,27 +509,27 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6C757D',
   },
   summaryValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#212529',
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: '#E9ECEF',
     paddingTop: 8,
     marginTop: 8,
   },
   totalLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#212529',
   },
   totalValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#F3B5A0',
+    color: '#007BFF',
   },
   paymentMethods: {
     marginBottom: 16,
@@ -537,7 +538,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#333',
+    color: '#212529',
   },
   paymentButtons: {
     flexDirection: 'row',
@@ -547,46 +548,46 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#FEA3BE',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007BFF',
     alignItems: 'center',
   },
   paymentButtonActive: {
-    backgroundColor: '#FEA3BE',
+    backgroundColor: '#007BFF',
   },
   paymentButtonText: {
     fontSize: 14,
-    color: '#FEA3BE',
+    color: '#007BFF',
     fontWeight: '600',
   },
   paymentButtonTextActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
   actionButtons: {
     gap: 12,
     marginBottom: 20,
   },
   payButton: {
-    backgroundColor: '#F3B5A0',
+    backgroundColor: '#28A745',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 6,
     alignItems: 'center',
   },
   payButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
   resetButton: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#6C757D',
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 6,
     alignItems: 'center',
   },
   resetButtonText: {
-    color: '#666',
+    color: '#6C757D',
     fontSize: 14,
   },
   modalOverlay: {
@@ -597,8 +598,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     padding: 24,
     width: '100%',
     maxWidth: 400,
@@ -606,7 +607,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#F3B5A0',
+    color: '#212529',
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -614,44 +615,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     padding: 16,
-    backgroundColor: '#FBCAAB20',
-    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 6,
   },
   modalTotalLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6C757D',
     marginBottom: 4,
   },
   modalTotalValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#F3B5A0',
+    color: '#007BFF',
   },
   modalPaymentInfo: {
     marginBottom: 20,
   },
   modalPaymentLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6C757D',
     marginBottom: 4,
   },
   modalPaymentValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#212529',
   },
   cashInput: {
     marginBottom: 20,
   },
   cashInputLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#6C757D',
     marginBottom: 8,
   },
   cashInputField: {
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
+    borderColor: '#DEE2E6',
+    borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
@@ -662,37 +663,37 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: '#F3B5A0',
+    backgroundColor: '#28A745',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 6,
     alignItems: 'center',
   },
   confirmButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
   cancelButton: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#6C757D',
     paddingVertical: 14,
-    borderRadius: 8,
+    borderRadius: 6,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#666',
+    color: '#6C757D',
     fontSize: 16,
   },
- footer: {
+  footer: {
     padding: 16,
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#E9ECEF',
   },
   footerText: {
-    color: '#9CA3AF',
+    color: '#6C757D',
     fontSize: 12,
   },
 });

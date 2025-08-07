@@ -1,5 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
@@ -9,7 +7,6 @@ import {
   FlatList,
   Image,
   Modal,
-  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -17,6 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import api from './axios';
 
 const { width } = Dimensions.get('window');
 
@@ -131,14 +129,13 @@ export default function BarangManagement() {
     kategori: '',
     harga: '',
     stok: '',
-    deskripsi: '',
     gambar: ''
   });
 
-  const filterCategories = ['Semua'];
   const [filteredBarang, setFilteredBarang] = useState([]);
 
-  const BASE_URL = 'https://89d8fc5c282c.ngrok-free.app/api/tambah';
+  // Fixed: Use consistent BASE_URL
+  const BASE_URL = 'https://fadf50ca5131.ngrok-free.app/api';
 
   useEffect(() => {
     fetchBarang();
@@ -151,8 +148,7 @@ export default function BarangManagement() {
     if (searchQuery.trim()) {
       filtered = filtered.filter(b =>
         b.nama_barang.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.kategori.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (b.deskripsi || '').toLowerCase().includes(searchQuery.toLowerCase())
+        b.kategori.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
@@ -165,17 +161,7 @@ export default function BarangManagement() {
 
   const fetchBarang = async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        Alert.alert('Error', 'Token tidak ditemukan, silakan login ulang');
-        return;
-      }
-
-      const res = await axios.get(`${BASE_URL}/tambah/barang`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const res = await api.get('/tambah/barang');
       setBarang(res.data.data);
     } catch (error) {
       console.error(error.response?.data || error.message);
@@ -186,18 +172,7 @@ export default function BarangManagement() {
   const fetchKategori = async () => {
     setLoadingKategori(true);
     try {
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        Alert.alert('Error', 'Token tidak ditemukan, silakan login ulang');
-        return;
-      }
-
-      const res = await axios.get(`${BASE_URL}/kategori`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const res = await api.get('/tambah/kategori');
       setCategoriesApi(res.data.data);
     } catch (error) {
       console.error(error.response?.data || error.message);
@@ -242,26 +217,27 @@ export default function BarangManagement() {
     formData.append('id_kategori', barangForm.kategori);
     formData.append('harga_barang', barangForm.harga);
     formData.append('stok_barang', barangForm.stok || 0);
-    formData.append('deskripsi', barangForm.deskripsi);
 
-    if (barangForm.gambar) {
+    if (barangForm.gambar && barangForm.gambar !== '') {
       formData.append('foto_barang', {
         uri: barangForm.gambar,
         type: 'image/jpeg',
-        name: 'barang.jpg'
+        name: 'barang.jpg',
       });
     }
 
     try {
-      await axios.post(` https://fadf50ca5131.ngrok-free.app/api/tambah/barang/store`, formData, {
+      // Fixed: Use consistent BASE_URL and API structure
+      await api.post('/tambah/barang/store', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchBarang();
       resetForm();
       setShowAddBarang(false);
+      Alert.alert('Sukses', 'Barang berhasil ditambahkan!');
     } catch (error) {
       console.error(error.response?.data || error.message);
-      Alert.alert('Error', 'Gagal menambah barang');
+      Alert.alert('Error', error.response?.data?.message || 'Gagal menambah barang');
     }
   };
 
@@ -271,7 +247,6 @@ export default function BarangManagement() {
     formData.append('id_kategori', barangForm.kategori);
     formData.append('harga_barang', barangForm.harga);
     formData.append('stok_barang', barangForm.stok || 0);
-    formData.append('deskripsi', barangForm.deskripsi);
 
     if (barangForm.gambar && barangForm.gambar.startsWith('file')) {
       formData.append('foto_barang', {
@@ -282,12 +257,13 @@ export default function BarangManagement() {
     }
 
     try {
-      await axios.post(`${BASE_URL}/tambah/barang/${editingBarang.id}?_method=PUT`, formData, {
+      await api.post(`/tambah/barang/${editingBarang.id}?_method=PUT`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       fetchBarang();
       resetForm();
       setShowEditBarang(false);
+      Alert.alert('Sukses', 'Barang berhasil diupdate!');
     } catch (error) {
       console.error(error.response?.data || error.message);
       Alert.alert('Error', 'Gagal mengupdate barang');
@@ -301,8 +277,9 @@ export default function BarangManagement() {
         text: 'Hapus',
         onPress: async () => {
           try {
-            await axios.delete(`${BASE_URL}/tambah/barang/${id}`);
+            await api.delete(`/tambah/barang/${id}`);
             fetchBarang();
+            Alert.alert('Sukses', 'Barang berhasil dihapus!');
           } catch (error) {
             console.error(error.response?.data || error.message);
             Alert.alert('Error', 'Gagal menghapus barang');
@@ -314,7 +291,7 @@ export default function BarangManagement() {
   };
 
   const resetForm = () => {
-    setBarangForm({ nama: '', kategori: '', harga: '', stok: '', deskripsi: '', gambar: '' });
+    setBarangForm({ nama: '', kategori: '', harga: '', stok: '', gambar: '' });
     setEditingBarang(null);
   };
 
@@ -325,7 +302,6 @@ export default function BarangManagement() {
       kategori: item.id_kategori?.toString() || '',
       harga: item.harga_barang?.toString() || '',
       stok: item.stok_barang?.toString() || '',
-      deskripsi: item.deskripsi || '',
       gambar: item.foto_barang || ''
     });
     setShowEditBarang(true);
@@ -335,24 +311,43 @@ export default function BarangManagement() {
     <View style={styles.card}>
       <View style={styles.cardContent}>
         <View style={styles.imageContainer}>
-          <Image source={{ uri: item.foto_barang }} style={styles.image} />
+          {item.foto_barang ? (
+            <Image
+              source={{ uri: item.foto_barang }}
+              style={styles.image}
+            />
+          ) : (
+            <View
+              style={[
+                styles.image,
+                {
+                  backgroundColor: '#ccc',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+              ]}
+            >
+              <Text style={{ color: '#666' }}>No Image</Text>
+            </View>
+          )}
           <View style={styles.stockBadge}>
             <Text style={styles.stockText}>{item.stok_barang}</Text>
           </View>
         </View>
-        
+
         <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={2}>{item.nama_barang}</Text>
-          <Text style={styles.desc} numberOfLines={2}>{item.deskripsi}</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            {item.nama_barang}
+          </Text>
           <Text style={styles.price}>{formatRupiah(item.harga_barang)}</Text>
-          
+
           <View style={styles.actionContainer}>
             <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
               <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.actionBtnGradient}>
                 <Text style={styles.actionBtnText}>✏️ Edit</Text>
               </LinearGradient>
             </TouchableOpacity>
-            
+
             <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteBarang(item.id)}>
               <LinearGradient colors={['#f44336', '#d32f2f']} style={styles.actionBtnGradient}>
                 <Text style={styles.actionBtnText}>🗑️ Hapus</Text>
@@ -364,23 +359,20 @@ export default function BarangManagement() {
     </View>
   );
 
+  // Fixed: Add complete return statement with proper JSX structure
   return (
-    <LinearGradient colors={['#f8f9fa', '#e9ecef']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>📦 Manajemen Barang</Text>
-        <Text style={styles.headerSubtitle}>Kelola inventori dengan mudah</Text>
-      </View>
+    <View style={styles.container}>
+      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+        <Text style={styles.headerTitle}>Barang Management</Text>
+        <Text style={styles.headerSubtitle}>Kelola data barang Anda</Text>
+      </LinearGradient>
 
-      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchWrapper}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
-            placeholder="Cari barang, kategori, atau deskripsi..."
             style={styles.searchInput}
+            placeholder="Cari barang..."
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholderTextColor="#999"
@@ -388,163 +380,241 @@ export default function BarangManagement() {
         </View>
       </View>
 
-      {/* Product List */}
       <FlatList
         data={filteredBarang}
         keyExtractor={item => item.id.toString()}
         renderItem={renderBarang}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
+        ListEmptyComponent={() => (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📦</Text>
             <Text style={styles.emptyText}>Belum ada barang</Text>
-            <Text style={styles.emptySubtext}>Tap tombol + untuk menambah barang</Text>
+            <Text style={styles.emptySubtext}>Tambahkan barang pertama Anda</Text>
           </View>
-        }
+        )}
       />
 
-      {/* Floating Action Button */}
+      {/* Add Button */}
       <TouchableOpacity style={styles.fab} onPress={() => setShowAddBarang(true)}>
         <LinearGradient colors={['#667eea', '#764ba2']} style={styles.fabGradient}>
           <Text style={styles.fabIcon}>+</Text>
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Modal */}
-      <Modal visible={showAddBarang || showEditBarang} animationType="slide" presentationStyle="pageSheet">
-        <LinearGradient colors={['#f8f9fa', '#ffffff']} style={styles.modalContainer}>
-          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
-            
-            {/* Modal Header */}
+      {/* Add Modal */}
+      <Modal
+        visible={showAddBarang}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAddBarang(false)}
+      >
+        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContainer}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {showEditBarang ? '✏️ Edit Barang' : '➕ Tambah Barang'}
-              </Text>
-              <Text style={styles.modalSubtitle}>
-                {showEditBarang ? 'Perbarui informasi barang' : 'Masukkan detail barang baru'}
-              </Text>
+              <Text style={styles.modalTitle}>Tambah Barang</Text>
+              <Text style={styles.modalSubtitle}>Lengkapi informasi barang baru</Text>
             </View>
 
-            {/* Form Fields */}
             <View style={styles.formContainer}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>📝 Nama Barang</Text>
+                <Text style={styles.inputLabel}>Nama Barang</Text>
                 <TextInput
+                  style={styles.input}
                   placeholder="Masukkan nama barang"
                   value={barangForm.nama}
-                  onChangeText={text => setBarangForm({ ...barangForm, nama: text })}
-                  style={styles.input}
+                  onChangeText={(text) => setBarangForm({ ...barangForm, nama: text })}
                   placeholderTextColor="#999"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>🏷️ Kategori</Text>
-                <CustomSelect 
+                <Text style={styles.inputLabel}>Kategori</Text>
+                <CustomSelect
                   data={categoriesApi}
                   selectedValue={barangForm.kategori}
                   onSelect={(value) => setBarangForm({ ...barangForm, kategori: value })}
-                  placeholder="Pilih Kategori"
+                  placeholder="Pilih kategori"
                   loading={loadingKategori}
                 />
               </View>
 
               <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                  <Text style={styles.inputLabel}>💰 Harga</Text>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>Harga</Text>
                   <TextInput
-                    placeholder="0"
-                    keyboardType="numeric"
-                    value={barangForm.harga}
-                    onChangeText={text => setBarangForm({ ...barangForm, harga: text })}
                     style={styles.input}
+                    placeholder="0"
+                    value={barangForm.harga}
+                    onChangeText={(text) => setBarangForm({ ...barangForm, harga: text })}
+                    keyboardType="numeric"
                     placeholderTextColor="#999"
                   />
                 </View>
-                
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                  <Text style={styles.inputLabel}>📊 Stok</Text>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Stok</Text>
                   <TextInput
-                    placeholder="0"
-                    keyboardType="numeric"
-                    value={barangForm.stok}
-                    onChangeText={text => setBarangForm({ ...barangForm, stok: text })}
                     style={styles.input}
+                    placeholder="0"
+                    value={barangForm.stok}
+                    onChangeText={(text) => setBarangForm({ ...barangForm, stok: text })}
+                    keyboardType="numeric"
                     placeholderTextColor="#999"
                   />
                 </View>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>📄 Deskripsi</Text>
+                <Text style={styles.inputLabel}>Gambar Barang</Text>
+                <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePicker}>
+                  <LinearGradient colors={['#e3f2fd', '#bbdefb']} style={styles.imagePickerGradient}>
+                    <Text style={styles.imagePickerIcon}>📷</Text>
+                    <Text style={styles.imagePickerText}>Pilih Gambar</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                {barangForm.gambar && (
+                  <View style={styles.imagePreviewContainer}>
+                    <Image source={{ uri: barangForm.gambar }} style={styles.previewImage} />
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.modalBtn} 
+                onPress={() => {
+                  resetForm();
+                  setShowAddBarang(false);
+                }}
+              >
+                <LinearGradient colors={['#9e9e9e', '#757575']} style={styles.modalBtnGradient}>
+                  <Text style={styles.modalBtnText}>Batal</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalBtn} onPress={handleAddBarang}>
+                <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.modalBtnGradient}>
+                  <Text style={styles.modalBtnText}>Tambah</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        visible={showEditBarang}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowEditBarang(false)}
+      >
+        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Barang</Text>
+              <Text style={styles.modalSubtitle}>Ubah informasi barang</Text>
+            </View>
+
+            <View style={styles.formContainer}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nama Barang</Text>
                 <TextInput
-                  placeholder="Deskripsi barang (opsional)"
-                  value={barangForm.deskripsi}
-                  onChangeText={text => setBarangForm({ ...barangForm, deskripsi: text })}
-                  style={[styles.input, styles.textArea]}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
+                  style={styles.input}
+                  placeholder="Masukkan nama barang"
+                  value={barangForm.nama}
+                  onChangeText={(text) => setBarangForm({ ...barangForm, nama: text })}
                   placeholderTextColor="#999"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>📷 Foto Barang</Text>
+                <Text style={styles.inputLabel}>Kategori</Text>
+                <CustomSelect
+                  data={categoriesApi}
+                  selectedValue={barangForm.kategori}
+                  onSelect={(value) => setBarangForm({ ...barangForm, kategori: value })}
+                  placeholder="Pilih kategori"
+                  loading={loadingKategori}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>Harga</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    value={barangForm.harga}
+                    onChangeText={(text) => setBarangForm({ ...barangForm, harga: text })}
+                    keyboardType="numeric"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Stok</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    value={barangForm.stok}
+                    onChangeText={(text) => setBarangForm({ ...barangForm, stok: text })}
+                    keyboardType="numeric"
+                    placeholderTextColor="#999"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Gambar Barang</Text>
                 <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePicker}>
                   <LinearGradient colors={['#e3f2fd', '#bbdefb']} style={styles.imagePickerGradient}>
-                    <Text style={styles.imagePickerIcon}>📸</Text>
-                    <Text style={styles.imagePickerText}>
-                      {barangForm.gambar ? 'Ganti Foto' : 'Pilih Foto'}
-                    </Text>
+                    <Text style={styles.imagePickerIcon}>📷</Text>
+                    <Text style={styles.imagePickerText}>Ubah Gambar</Text>
                   </LinearGradient>
                 </TouchableOpacity>
-
-                {barangForm.gambar ? (
+                
+                {barangForm.gambar && (
                   <View style={styles.imagePreviewContainer}>
                     <Image source={{ uri: barangForm.gambar }} style={styles.previewImage} />
                   </View>
-                ) : null}
+                )}
               </View>
             </View>
 
-            {/* Modal Actions */}
             <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={styles.modalBtn}
-                onPress={showEditBarang ? handleEditBarang : handleAddBarang}
-              >
-                <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>
-                    {showEditBarang ? '✅ Update' : '💾 Simpan'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.modalBtn}
+              <TouchableOpacity 
+                style={styles.modalBtn} 
                 onPress={() => {
                   resetForm();
-                  setShowAddBarang(false);
                   setShowEditBarang(false);
                 }}
               >
-                <LinearGradient colors={['#757575', '#616161']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>❌ Batal</Text>
+                <LinearGradient colors={['#9e9e9e', '#757575']} style={styles.modalBtnGradient}>
+                  <Text style={styles.modalBtnText}>Batal</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalBtn} onPress={handleEditBarang}>
+                <LinearGradient colors={['#FF9800', '#F57C00']} style={styles.modalBtnGradient}>
+                  <Text style={styles.modalBtnText}>Update</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </LinearGradient>
       </Modal>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   header: {
     paddingTop: StatusBar.currentHeight || 44,
@@ -555,17 +625,18 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2c3e50',
+    color: 'white',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#7f8c8d',
+    color: 'rgba(255,255,255,0.8)',
     fontWeight: '400',
   },
   searchContainer: {
     paddingHorizontal: 20,
     marginBottom: 20,
+    marginTop: 20,
   },
   searchWrapper: {
     flexDirection: 'row',
@@ -730,8 +801,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalContent: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: 60,
     padding: 20,
-    paddingTop: StatusBar.currentHeight || 44,
   },
   modalHeader: {
     alignItems: 'center',
@@ -749,6 +824,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   formContainer: {
+    flex: 1,
     marginBottom: 30,
   },
   inputGroup: {
@@ -777,35 +853,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 1,
-  },
-  textArea: {
-    minHeight: 80,
-    maxHeight: 120,
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  loadingText: {
-    marginLeft: 8,
-    color: '#7f8c8d',
-    fontSize: 16,
-  },
-  pickerContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
   },
   imagePickerBtn: {
     borderRadius: 12,
