@@ -138,7 +138,7 @@ export default function BarangManagement() {
   const filterCategories = ['Semua'];
   const [filteredBarang, setFilteredBarang] = useState([]);
 
-  const BASE_URL = ' https://fadf50ca5131.ngrok-free.app/api/tambah';
+  const BASE_URL = 'https://89d8fc5c282c.ngrok-free.app/api/tambah';
 
   useEffect(() => {
     fetchBarang();

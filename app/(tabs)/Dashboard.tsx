@@ -18,6 +18,7 @@ export default function Dashboard() {
   const router = useRouter();
   const { setIsLoggedIn } = useContext(AuthContext);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const handleLogoutPress = () => {
     setShowLogoutModal(true);
@@ -33,207 +34,184 @@ export default function Dashboard() {
     setShowLogoutModal(false);
   };
 
+  const handleOpenHistory = () => {
+    setShowHistoryModal(true);
+  };
+
+  const handleCloseHistory = () => {
+    setShowHistoryModal(false);
+  };
+
   const todaySales = 2450000;
   const todayTransactions = 47;
   const totalProducts = 156;
 
   const recentTransactions = [
-    { id: '#001', time: '14:30', amount: 125000, items: 3, customer: 'Ahmad S.' },
-    { id: '#002', time: '14:15', amount: 85000, items: 2, customer: 'Sari M.' },
-    { id: '#003', time: '13:45', amount: 165000, items: 5, customer: 'Budi P.' },
-    { id: '#004', time: '13:20', amount: 95000, items: 2, customer: 'Lisa A.' },
+    { id: '#001', time: '14:30', amount: 125000, customer: 'Ahmad S.', date: '2024-08-07', status: 'success' },
+    { id: '#002', time: '14:15', amount: 85000, customer: 'Sari M.', date: '2024-08-07', status: 'success' },
+    { id: '#003', time: '13:45', amount: 165000, customer: 'Budi P.', date: '2024-08-07', status: 'success' },
+    { id: '#004', time: '13:20', amount: 95000, customer: 'Lisa A.', date: '2024-08-07', status: 'success' },
   ];
 
-  const topProducts = [
-    { name: 'Kopi Arabica', sales: 45, revenue: 1125000 },
-    { name: 'Teh Hijau', sales: 32, revenue: 480000 },
-    { name: 'Susu UHT', sales: 28, revenue: 224000 },
-    { name: 'Roti Tawar', sales: 23, revenue: 115000 },
+  const salesHistory = [
+    { id: '#001', time: '14:30', amount: 125000, customer: 'Ahmad S.', date: '2024-08-07', status: 'success', items: 'Kopi Arabica, Roti Bakar' },
+    { id: '#002', time: '14:15', amount: 85000, customer: 'Sari M.', date: '2024-08-07', status: 'success', items: 'Teh Hijau, Biskuit' },
+    { id: '#003', time: '13:45', amount: 165000, customer: 'Budi P.', date: '2024-08-07', status: 'success', items: 'Susu UHT, Kopi, Snack' },
+    { id: '#004', time: '13:20', amount: 95000, customer: 'Lisa A.', date: '2024-08-07', status: 'success', items: 'Roti Tawar, Selai' },
+    { id: '#005', time: '12:45', amount: 75000, customer: 'Dedi R.', date: '2024-08-07', status: 'success', items: 'Air Mineral, Permen' },
+    { id: '#006', time: '12:30', amount: 145000, customer: 'Nina K.', date: '2024-08-07', status: 'success', items: 'Kopi Premium, Cake' },
+    { id: '#007', time: '11:15', amount: 65000, customer: 'Tono S.', date: '2024-08-06', status: 'success', items: 'Teh Botol, Kerupuk' },
+    { id: '#008', time: '10:30', amount: 185000, customer: 'Maya L.', date: '2024-08-06', status: 'success', items: 'Paket Sarapan' },
+    { id: '#009', time: '09:45', amount: 95000, customer: 'Andi P.', date: '2024-08-06', status: 'success', items: 'Jus Jeruk, Sandwich' },
+    { id: '#010', time: '16:20', amount: 115000, customer: 'Siska M.', date: '2024-08-05', status: 'success', items: 'Kopi Latte, Donut' },
+    { id: '#011', time: '15:45', amount: 85000, customer: 'Bambang H.', date: '2024-08-05', status: 'cancelled', items: 'Teh Tarik' },
+    { id: '#012', time: '14:30', amount: 155000, customer: 'Rina D.', date: '2024-08-05', status: 'success', items: 'Paket Makan Siang' },
   ];
-
-  const salesData = [
-    { day: 'Sen', amount: 1800000 },
-    { day: 'Sel', amount: 2200000 },
-    { day: 'Rab', amount: 1950000 },
-    { day: 'Kam', amount: 2450000 },
-    { day: 'Jum', amount: 2100000 },
-    { day: 'Sab', amount: 2800000 },
-    { day: 'Min', amount: 2300000 },
-  ];
-
-  const maxSales = Math.max(...salesData.map(d => d.amount));
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Dashboard POS</Text>
-          <Text style={styles.subtitle}>
-            Toko Sejahtera - {new Date().toLocaleDateString('id-ID', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
-          </Text>
+          <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.subtitle}>Toko Sejahtera</Text>
         </View>
-        <View style={styles.rightHeader}>
-          <TouchableOpacity 
-  onPress={() => router.push('/profile')}
-  style={styles.profileButton}
-  activeOpacity={0.8}
->
-  <Text style={styles.profileIcon}>👤</Text>
-</TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          onPress={() => router.push('/profile')}
+          style={styles.profileButton}
+        >
+          <Text style={styles.profileIcon}>👤</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Main Content */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{formatRupiah(todaySales)}</Text>
+        {/* Quick Stats */}
+        <View style={styles.quickStats}>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{formatRupiah(todaySales)}</Text>
             <Text style={styles.statLabel}>Penjualan Hari Ini</Text>
-            <Text style={styles.statIcon}>💰</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{todayTransactions}</Text>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{todayTransactions}</Text>
             <Text style={styles.statLabel}>Transaksi</Text>
-            <Text style={styles.statIcon}>🛒</Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{totalProducts}</Text>
+            <Text style={styles.statLabel}>Produk</Text>
           </View>
         </View>
 
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{totalProducts}</Text>
-            <Text style={styles.statLabel}>Total Produk</Text>
-            <Text style={styles.statIcon}>📦</Text>
+        {/* Recent Transactions */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Transaksi Terbaru</Text>
+            <TouchableOpacity 
+              onPress={handleOpenHistory}
+              style={styles.viewAllButton}
+            >
+              <Text style={styles.viewAllText}>Lihat Semua</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>4.8/5</Text>
-            <Text style={styles.statLabel}>Rating Toko</Text>
-            <Text style={styles.statIcon}>⭐</Text>
-          </View>
-        </View>
-
-        {/* Chart */}
-        <View style={styles.chartContainer}>
-          <Text style={styles.sectionTitle}>Penjualan Mingguan</Text>
-          <View style={styles.chart}>
-            {salesData.map((item, index) => (
-              <View key={index} style={styles.chartItem}>
-                <View style={[styles.chartBar, { height: (item.amount / maxSales) * 120 }]} />
-                <Text style={styles.chartDay}>{item.day}</Text>
-                <Text style={styles.chartAmount}>
-                  {formatRupiah(item.amount).replace('Rp ', '').substring(0, 4)}K
-                </Text>
+          <View style={styles.transactionsList}>
+            {recentTransactions.map((transaction, index) => (
+              <View key={index} style={styles.transactionItem}>
+                <View>
+                  <Text style={styles.transactionId}>{transaction.id}</Text>
+                  <Text style={styles.transactionCustomer}>{transaction.customer}</Text>
+                </View>
+                <View style={styles.transactionRight}>
+                  <Text style={styles.transactionAmount}>{formatRupiah(transaction.amount)}</Text>
+                  <Text style={styles.transactionTime}>{transaction.time}</Text>
+                </View>
               </View>
             ))}
           </View>
         </View>
 
-        {/* Recent Transactions */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Transaksi Terbaru</Text>
-          {recentTransactions.map((transaction, index) => (
-            <View key={index} style={styles.transactionItem}>
-              <View style={styles.transactionLeft}>
-                <Text style={styles.transactionId}>{transaction.id}</Text>
-                <Text style={styles.transactionTime}>{transaction.time}</Text>
-              </View>
-              <View style={styles.transactionCenter}>
-                <Text style={styles.transactionCustomer}>{transaction.customer}</Text>
-                <Text style={styles.transactionItems}>{transaction.items} items</Text>
-              </View>
-              <View style={styles.transactionRight}>
-                <Text style={styles.transactionAmount}>{formatRupiah(transaction.amount)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Top Products */}
-        <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>Produk Terlaris</Text>
-          {topProducts.map((product, index) => (
-            <View key={index} style={styles.productItem}>
-              <View style={styles.productRank}>
-                <Text style={styles.productRankText}>{index + 1}</Text>
-              </View>
-              <View style={styles.productInfo}>
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productSales}>{product.sales} terjual</Text>
-              </View>
-              <View style={styles.productRevenue}>
-                <Text style={styles.productRevenueText}>{formatRupiah(product.revenue)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.footerPadding} />
+        <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Toko Sejahtera - POS System v1.0.0</Text>
-      </View>
-
-      {/* Logout Confirmation Modal */}
+      {/* History Modal */}
       <Modal
         animationType="slide"
+        transparent={true}
+        visible={showHistoryModal}
+        onRequestClose={handleCloseHistory}
+      >
+        <View style={styles.historyModalOverlay}>
+          <View style={styles.historyModalContainer}>
+            {/* Header */}
+            <View style={styles.historyHeader}>
+              <Text style={styles.historyTitle}>History Penjualan</Text>
+              <TouchableOpacity 
+                onPress={handleCloseHistory}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* List */}
+            <ScrollView style={styles.historyList}>
+              {salesHistory.map((item, index) => (
+                <View key={index} style={styles.historyCard}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardId}>{item.id}</Text>
+                    <View style={[styles.badge, {
+                      backgroundColor: item.status === 'success' ? '#DCFCE7' : '#FEE2E2'
+                    }]}>
+                      <Text style={[styles.badgeText, {
+                        color: item.status === 'success' ? '#059669' : '#DC2626'
+                      }]}>
+                        {item.status === 'success' ? 'Berhasil' : 'Dibatalkan'}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.cardCustomer}>{item.customer}</Text>
+                  <Text style={styles.cardItems}>{item.items}</Text>
+                  <Text style={styles.cardDate}>{item.date} • {item.time}</Text>
+                  <Text style={styles.cardAmount}>{formatRupiah(item.amount)}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            
+            {/* Footer */}
+            <View style={styles.historyFooter}>
+              <Text style={styles.footerText}>
+                Total: {salesHistory.filter(t => t.status === 'success').length} transaksi berhasil
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Logout Modal */}
+      <Modal
+        animationType="fade"
         transparent={true}
         visible={showLogoutModal}
         onRequestClose={handleCancelLogout}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            {/* Icon Header */}
-            <View style={styles.modalIconContainer}>
-              <View style={styles.modalIconCircle}>
-                <Text style={styles.modalIcon}>👋</Text>
-              </View>
-            </View>
-            
-            {/* Content */}
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Sampai Jumpa!</Text>
-              <Text style={styles.modalSubtitle}>
-                Yakin ingin keluar dari Dashboard POS?
-              </Text>
-              <Text style={styles.modalMessage}>
-                Data Anda akan tersimpan dengan aman dan bisa diakses kembali saat login.
-              </Text>
-            </View>
-            
-            {/* Action Buttons */}
+            <Text style={styles.modalTitle}>Keluar dari Dashboard?</Text>
+            <Text style={styles.modalMessage}>
+              Data Anda akan tersimpan dengan aman
+            </Text>
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={styles.stayButton} 
+                style={styles.cancelButton} 
                 onPress={handleCancelLogout}
-                activeOpacity={0.8}
               >
-                <Text style={styles.stayButtonIcon}>🏠</Text>
-                <Text style={styles.stayButtonText}>Tetap Disini</Text>
+                <Text style={styles.cancelButtonText}>Batal</Text>
               </TouchableOpacity>
-              
               <TouchableOpacity 
-                style={styles.logoutConfirmButton} 
+                style={styles.confirmButton} 
                 onPress={handleConfirmLogout}
-                activeOpacity={0.8}
               >
-                <Text style={styles.logoutButtonIcon}>🚪</Text>
-                <Text style={styles.logoutConfirmButtonText}>Ya, Keluar</Text>
+                <Text style={styles.confirmButtonText}>Keluar</Text>
               </TouchableOpacity>
-            </View>
-            
-            {/* Decorative Elements */}
-            <View style={styles.decorativeElements}>
-              <View style={[styles.decorativeDot, { backgroundColor: '#FB7185' }]} />
-              <View style={[styles.decorativeDot, { backgroundColor: '#F59E0B' }]} />
-              <View style={[styles.decorativeDot, { backgroundColor: '#10B981' }]} />
             </View>
           </View>
         </View>
@@ -243,248 +221,312 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF1F2' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#F8FAFC' 
+  },
   header: {
-    marginTop: 50, marginBottom: 20, marginHorizontal: 16,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginTop: 50, 
+    marginBottom: 24, 
+    marginHorizontal: 20,
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
   },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#1F2937' },
-  subtitle: { marginTop: 4, color: '#4B5563', fontSize: 14 },
-  rightHeader: { flexDirection: 'row', alignItems: 'center' },
-  logoutButton: {
-    backgroundColor: '#EF4444', paddingVertical: 8, paddingHorizontal: 12,
-    borderRadius: 8,
+  title: { 
+    fontSize: 28, 
+    fontWeight: '700', 
+    color: '#1E293B' 
   },
-  logoutText: {
-    color: 'white', fontWeight: 'bold',
+  subtitle: { 
+    marginTop: 2, 
+    color: '#64748B', 
+    fontSize: 16 
   },
-  scrollView: { flex: 1, paddingHorizontal: 16 },
-  statsContainer: {
-    flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16,
+  profileButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  statCard: {
-    flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16,
-    marginHorizontal: 4, alignItems: 'center', elevation: 2,
+  profileIcon: {
+    fontSize: 20,
   },
-  statNumber: {
-    fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginBottom: 4,
+  scrollView: { 
+    flex: 1, 
+    paddingHorizontal: 20 
+  },
+  quickStats: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  statItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12, color: '#6B7280', textAlign: 'center', marginBottom: 8,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  statIcon: { fontSize: 24 },
-  chartContainer: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 16,
+  section: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginBottom: 16,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
   },
-  chart: {
-    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', height: 160,
+  viewAllButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
   },
-  chartItem: { alignItems: 'center', flex: 1 },
-  chartBar: {
-    width: 20, backgroundColor: '#FB7185', borderRadius: 4, marginBottom: 8,
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
-  chartDay: {
-    fontSize: 12, fontWeight: 'bold', color: '#374151', marginBottom: 2,
-  },
-  chartAmount: {
-    fontSize: 10, color: '#6B7280',
-  },
-  sectionContainer: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, marginBottom: 16,
+  transactionsList: {
+    gap: 12,
   },
   transactionItem: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
-  transactionLeft: { flex: 1 },
-  transactionId: { fontSize: 14, fontWeight: 'bold', color: '#374151' },
-  transactionTime: { fontSize: 12, color: '#6B7280' },
-  transactionCenter: { flex: 2, paddingHorizontal: 8 },
-  transactionCustomer: { fontSize: 14, color: '#374151' },
-  transactionItems: { fontSize: 12, color: '#6B7280' },
-  transactionRight: { flex: 1, alignItems: 'flex-end' },
+  transactionId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 2,
+  },
+  transactionCustomer: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  transactionRight: {
+    alignItems: 'flex-end',
+  },
   transactionAmount: {
-    fontSize: 14, fontWeight: 'bold', color: '#059669',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
+    marginBottom: 2,
   },
-  productItem: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  transactionTime: {
+    fontSize: 12,
+    color: '#94A3B8',
   },
-  productRank: {
-    width: 32, height: 32, borderRadius: 16, backgroundColor: '#FB7185',
-    justifyContent: 'center', alignItems: 'center', marginRight: 12,
+  bottomPadding: { 
+    height: 30 
   },
-  productRankText: {
-    color: '#FFFFFF', fontWeight: 'bold', fontSize: 14,
+
+  // History Modal Styles
+  historyModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  productInfo: { flex: 1 },
-  productName: { fontSize: 14, fontWeight: 'bold', color: '#374151' },
-  productSales: { fontSize: 12, color: '#6B7280' },
-  productRevenue: { alignItems: 'flex-end' },
-  productRevenueText: {
-    fontSize: 14, fontWeight: 'bold', color: '#059669',
+  historyModalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginTop: 60,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
-  footerPadding: { height: 20 },
-  footer: {
-    padding: 16, alignItems: 'center', backgroundColor: '#FFFFFF',
-    borderTopWidth: 1, borderTopColor: '#F3F4F6',
+  historyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  historyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#64748B',
+    fontWeight: 'bold',
+  },
+  historyList: {
+    flex: 1,
+    padding: 24,
+  },
+  historyCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2563EB',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardId: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cardCustomer: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 4,
+  },
+  cardItems: {
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 8,
+  },
+  cardDate: {
+    fontSize: 13,
+    color: '#94A3B8',
+    marginBottom: 8,
+  },
+  cardAmount: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  historyFooter: {
+    padding: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
   },
   footerText: {
-    color: '#9CA3AF', fontSize: 12,
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  
-  // Modal Styles
+
+  // Logout Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  profileButton: {
-  width: 40,
-  height: 40,
-  borderRadius: 20,
-  backgroundColor: '#F3F4F6',
-  alignItems: 'center',
-  justifyContent: 'center',
-  elevation: 2,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.1,
-  shadowRadius: 4,
-},
-profileIcon: {
-  fontSize: 20,
-},
   modalContainer: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 20,
+    padding: 24,
     width: '100%',
-    maxWidth: 380,
-    elevation: 20,
+    maxWidth: 320,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  modalIconContainer: {
-    alignItems: 'center',
-    paddingTop: 32,
-    paddingBottom: 16,
-    background: 'linear-gradient(135deg, #FFF1F2 0%, #FDF2F8 100%)',
-  },
-  modalIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#FB7185',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#FB7185',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-  },
-  modalIcon: {
-    fontSize: 36,
-  },
-  modalContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    alignItems: 'center',
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
     marginBottom: 8,
-  },
-  modalSubtitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
     textAlign: 'center',
-    marginBottom: 12,
   },
   modalMessage: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#64748B',
     textAlign: 'center',
+    marginBottom: 24,
     lineHeight: 20,
-    marginBottom: 8,
   },
   modalActions: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
     gap: 12,
+    width: '100%',
   },
-  stayButton: {
+  cancelButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  stayButtonIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  stayButtonText: {
+  cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#475569',
   },
-  logoutConfirmButton: {
+  confirmButton: {
     flex: 1,
     backgroundColor: '#EF4444',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
   },
-  logoutButtonIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  logoutConfirmButtonText: {
+  confirmButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
-  },
-  decorativeElements: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 20,
-    gap: 8,
-  },
-  decorativeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
   },
 });
