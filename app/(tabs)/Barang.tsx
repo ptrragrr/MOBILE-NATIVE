@@ -136,8 +136,7 @@ export default function BarangManagement() {
 
   const [filteredBarang, setFilteredBarang] = useState([]);
 
-  // Fixed: Use consistent BASE_URL
-  const BASE_URL = 'https://fadf50ca5131.ngrok-free.app/api';
+  const BASE_URL = 'https://89d8fc5c282c.ngrok-free.app/api/tambah';
 
   useEffect(() => {
     fetchBarang();
