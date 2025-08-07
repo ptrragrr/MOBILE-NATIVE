@@ -7,6 +7,8 @@ import {
   FlatList,
   Image,
   Modal,
+  Platform,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -227,7 +229,6 @@ export default function BarangManagement() {
     }
 
     try {
-      // Fixed: Use consistent BASE_URL and API structure
       await api.post('/tambah/barang/store', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -359,7 +360,131 @@ export default function BarangManagement() {
     </View>
   );
 
-  // Fixed: Add complete return statement with proper JSX structure
+  // Modal Form Component - Fixed keyboard issue
+  const ModalForm = ({ visible, onClose, onSubmit, title, subtitle, buttonText, isEdit = false }) => (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+    >
+      <View style={styles.fullScreenModal}>
+        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>{title}</Text>
+              <Text style={styles.modalSubtitle}>{subtitle}</Text>
+            </View>
+
+            <ScrollView 
+              style={styles.formScrollContainer}
+              contentContainerStyle={styles.formContainer}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              nestedScrollEnabled={true}
+            >
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Nama Barang</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Masukkan nama barang"
+                  value={barangForm.nama}
+                  onChangeText={(text) => setBarangForm({ ...barangForm, nama: text })}
+                  placeholderTextColor="#999"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Kategori</Text>
+                <CustomSelect
+                  data={categoriesApi}
+                  selectedValue={barangForm.kategori}
+                  onSelect={(value) => setBarangForm({ ...barangForm, kategori: value })}
+                  placeholder="Pilih kategori"
+                  loading={loadingKategori}
+                />
+              </View>
+
+              <View style={styles.inputRow}>
+                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                  <Text style={styles.inputLabel}>Harga</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    value={barangForm.harga}
+                    onChangeText={(text) => setBarangForm({ ...barangForm, harga: text })}
+                    keyboardType="numeric"
+                    placeholderTextColor="#999"
+                    returnKeyType="next"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                  <Text style={styles.inputLabel}>Stok</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    value={barangForm.stok}
+                    onChangeText={(text) => setBarangForm({ ...barangForm, stok: text })}
+                    keyboardType="numeric"
+                    placeholderTextColor="#999"
+                    returnKeyType="done"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Gambar Barang</Text>
+                <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePicker}>
+                  <LinearGradient colors={['#e3f2fd', '#bbdefb']} style={styles.imagePickerGradient}>
+                    <Text style={styles.imagePickerIcon}>📷</Text>
+                    <Text style={styles.imagePickerText}>
+                      {isEdit ? 'Ubah Gambar' : 'Pilih Gambar'}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                {barangForm.gambar && (
+                  <View style={styles.imagePreviewContainer}>
+                    <Image source={{ uri: barangForm.gambar }} style={styles.previewImage} />
+                  </View>
+                )}
+              </View>
+
+              {/* Extra space for keyboard */}
+              <View style={{ height: 120 }} />
+            </ScrollView>
+
+            {/* Action Buttons - Fixed at bottom */}
+            <View style={styles.stableModalActions}>
+              <TouchableOpacity 
+                style={styles.modalBtn} 
+                onPress={() => {
+                  resetForm();
+                  onClose();
+                }}
+              >
+                <LinearGradient colors={['#9e9e9e', '#757575']} style={styles.modalBtnGradient}>
+                  <Text style={styles.modalBtnText}>Batal</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.modalBtn} onPress={onSubmit}>
+                <LinearGradient 
+                  colors={isEdit ? ['#FF9800', '#F57C00'] : ['#4CAF50', '#45a049']} 
+                  style={styles.modalBtnGradient}
+                >
+                  <Text style={styles.modalBtnText}>{buttonText}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
@@ -403,210 +528,26 @@ export default function BarangManagement() {
       </TouchableOpacity>
 
       {/* Add Modal */}
-      <Modal
+      <ModalForm
         visible={showAddBarang}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAddBarang(false)}
-      >
-        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Tambah Barang</Text>
-              <Text style={styles.modalSubtitle}>Lengkapi informasi barang baru</Text>
-            </View>
-
-            <View style={styles.formContainer}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Nama Barang</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Masukkan nama barang"
-                  value={barangForm.nama}
-                  onChangeText={(text) => setBarangForm({ ...barangForm, nama: text })}
-                  placeholderTextColor="#999"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Kategori</Text>
-                <CustomSelect
-                  data={categoriesApi}
-                  selectedValue={barangForm.kategori}
-                  onSelect={(value) => setBarangForm({ ...barangForm, kategori: value })}
-                  placeholder="Pilih kategori"
-                  loading={loadingKategori}
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-                  <Text style={styles.inputLabel}>Harga</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="0"
-                    value={barangForm.harga}
-                    onChangeText={(text) => setBarangForm({ ...barangForm, harga: text })}
-                    keyboardType="numeric"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-                  <Text style={styles.inputLabel}>Stok</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="0"
-                    value={barangForm.stok}
-                    onChangeText={(text) => setBarangForm({ ...barangForm, stok: text })}
-                    keyboardType="numeric"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Gambar Barang</Text>
-                <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePicker}>
-                  <LinearGradient colors={['#e3f2fd', '#bbdefb']} style={styles.imagePickerGradient}>
-                    <Text style={styles.imagePickerIcon}>📷</Text>
-                    <Text style={styles.imagePickerText}>Pilih Gambar</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                
-                {barangForm.gambar && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image source={{ uri: barangForm.gambar }} style={styles.previewImage} />
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalBtn} 
-                onPress={() => {
-                  resetForm();
-                  setShowAddBarang(false);
-                }}
-              >
-                <LinearGradient colors={['#9e9e9e', '#757575']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>Batal</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.modalBtn} onPress={handleAddBarang}>
-                <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>Tambah</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </LinearGradient>
-      </Modal>
+        onClose={() => setShowAddBarang(false)}
+        onSubmit={handleAddBarang}
+        title="Tambah Barang"
+        subtitle="Lengkapi informasi barang baru"
+        buttonText="Tambah"
+        isEdit={false}
+      />
 
       {/* Edit Modal */}
-      <Modal
+      <ModalForm
         visible={showEditBarang}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowEditBarang(false)}
-      >
-        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Barang</Text>
-              <Text style={styles.modalSubtitle}>Ubah informasi barang</Text>
-            </View>
-
-            <View style={styles.formContainer}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Nama Barang</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Masukkan nama barang"
-                  value={barangForm.nama}
-                  onChangeText={(text) => setBarangForm({ ...barangForm, nama: text })}
-                  placeholderTextColor="#999"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Kategori</Text>
-                <CustomSelect
-                  data={categoriesApi}
-                  selectedValue={barangForm.kategori}
-                  onSelect={(value) => setBarangForm({ ...barangForm, kategori: value })}
-                  placeholder="Pilih kategori"
-                  loading={loadingKategori}
-                />
-              </View>
-
-              <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
-                  <Text style={styles.inputLabel}>Harga</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="0"
-                    value={barangForm.harga}
-                    onChangeText={(text) => setBarangForm({ ...barangForm, harga: text })}
-                    keyboardType="numeric"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
-                  <Text style={styles.inputLabel}>Stok</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="0"
-                    value={barangForm.stok}
-                    onChangeText={(text) => setBarangForm({ ...barangForm, stok: text })}
-                    keyboardType="numeric"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Gambar Barang</Text>
-                <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePicker}>
-                  <LinearGradient colors={['#e3f2fd', '#bbdefb']} style={styles.imagePickerGradient}>
-                    <Text style={styles.imagePickerIcon}>📷</Text>
-                    <Text style={styles.imagePickerText}>Ubah Gambar</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                
-                {barangForm.gambar && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image source={{ uri: barangForm.gambar }} style={styles.previewImage} />
-                  </View>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.modalBtn} 
-                onPress={() => {
-                  resetForm();
-                  setShowEditBarang(false);
-                }}
-              >
-                <LinearGradient colors={['#9e9e9e', '#757575']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>Batal</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.modalBtn} onPress={handleEditBarang}>
-                <LinearGradient colors={['#FF9800', '#F57C00']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>Update</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </LinearGradient>
-      </Modal>
+        onClose={() => setShowEditBarang(false)}
+        onSubmit={handleEditBarang}
+        title="Edit Barang"
+        subtitle="Ubah informasi barang"
+        buttonText="Update"
+        isEdit={true}
+      />
     </View>
   );
 }
@@ -797,6 +738,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '300',
   },
+  
+  // Fixed Modal Styles - Stable keyboard handling
+  fullScreenModal: {
+    flex: 1,
+    backgroundColor: '#000000aa',
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   modalContainer: {
     flex: 1,
   },
@@ -806,11 +756,15 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     marginTop: 60,
-    padding: 20,
   },
   modalHeader: {
     alignItems: 'center',
-    marginBottom: 30,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   modalTitle: {
     fontSize: 24,
@@ -823,9 +777,12 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     textAlign: 'center',
   },
-  formContainer: {
+  formScrollContainer: {
     flex: 1,
-    marginBottom: 30,
+  },
+  formContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
   inputGroup: {
     marginBottom: 20,
@@ -884,9 +841,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#f5f5f5',
   },
-  modalActions: {
+  
+  // Stable Action Buttons - Always visible
+  stableModalActions: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    backgroundColor: '#f8f9fa',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   modalBtn: {
     flex: 1,
