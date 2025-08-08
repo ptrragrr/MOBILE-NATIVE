@@ -1,11 +1,11 @@
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Dimensions,
   FlatList,
   Image,
+  Keyboard,
   Modal,
   Platform,
   ScrollView,
@@ -14,22 +14,27 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View
 } from 'react-native';
 import api from './axios';
 
 const { width } = Dimensions.get('window');
 
-// Custom Select2-like Component
+// Custom Select Component with cleaner design
 const CustomSelect = ({ data, selectedValue, onSelect, placeholder, loading }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const filteredData = data.filter(item => 
-    item.nama.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Safe filter dengan pengecekan data
+  const filteredData = data && data.length > 0 ? data.filter(item => 
+    item && item.nama && item.nama.toLowerCase().includes(searchQuery.toLowerCase())
+  ) : [];
   
-  const selectedItem = data.find(item => item.id.toString() === selectedValue);
+  // Safe find dengan pengecekan data
+  const selectedItem = data && data.length > 0 ? data.find(item => 
+    item && item.id && item.id.toString() === selectedValue
+  ) : null;
   
   return (
     <>
@@ -44,9 +49,11 @@ const CustomSelect = ({ data, selectedValue, onSelect, placeholder, loading }) =
         ]}>
           {loading ? 'Memuat...' : (selectedItem ? selectedItem.nama : placeholder)}
         </Text>
-        <Text style={styles.customSelectArrow}>
-          {loading ? '⏳' : '▼'}
-        </Text>
+        <View style={styles.selectArrowContainer}>
+          <Text style={styles.customSelectArrow}>
+            {loading ? '⏳' : '▼'}
+          </Text>
+        </View>
       </TouchableOpacity>
       
       <Modal
@@ -62,12 +69,14 @@ const CustomSelect = ({ data, selectedValue, onSelect, placeholder, loading }) =
               onPress={() => setModalVisible(false)}
               style={styles.selectModalClose}
             >
-              <Text style={styles.selectModalCloseText}>✕</Text>
+              <Text style={styles.selectModalCloseText}>×</Text>
             </TouchableOpacity>
           </View>
           
           <View style={styles.selectSearchContainer}>
-            <Text style={styles.selectSearchIcon}>🔍</Text>
+            <View style={styles.searchIconContainer}>
+              <Text style={styles.selectSearchIcon}>🔍</Text>
+            </View>
             <TextInput
               style={styles.selectSearchInput}
               placeholder="Cari kategori..."
@@ -79,33 +88,43 @@ const CustomSelect = ({ data, selectedValue, onSelect, placeholder, loading }) =
           
           <FlatList
             data={filteredData}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.selectOptionItem,
-                  selectedValue === item.id.toString() && styles.selectOptionSelected
-                ]}
-                onPress={() => {
-                  onSelect(item.id.toString());
-                  setModalVisible(false);
-                  setSearchQuery('');
-                }}
-              >
-                <Text style={[
-                  styles.selectOptionText,
-                  selectedValue === item.id.toString() && styles.selectOptionTextSelected
-                ]}>
-                  {item.nama}
-                </Text>
-                {selectedValue === item.id.toString() && (
-                  <Text style={styles.selectOptionCheck}>✓</Text>
-                )}
-              </TouchableOpacity>
-            )}
+            keyExtractor={(item, index) => item?.id ? item.id.toString() : index.toString()}
+            renderItem={({ item }) => {
+              // Safety check untuk item
+              if (!item || !item.id || !item.nama) return null;
+              
+              return (
+                <TouchableOpacity
+                  style={[
+                    styles.selectOptionItem,
+                    selectedValue === item.id.toString() && styles.selectOptionSelected
+                  ]}
+                  onPress={() => {
+                    onSelect(item.id.toString());
+                    setModalVisible(false);
+                    setSearchQuery('');
+                  }}
+                >
+                  <Text style={[
+                    styles.selectOptionText,
+                    selectedValue === item.id.toString() && styles.selectOptionTextSelected
+                  ]}>
+                    {item.nama}
+                  </Text>
+                  {selectedValue === item.id.toString() && (
+                    <View style={styles.checkmarkContainer}>
+                      <Text style={styles.selectOptionCheck}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            }}
             ListEmptyComponent={() => (
               <View style={styles.selectEmptyContainer}>
-                <Text style={styles.selectEmptyText}>Kategori tidak ditemukan</Text>
+                <Text style={styles.selectEmptyIcon}>🔍</Text>
+                <Text style={styles.selectEmptyText}>
+                  {loading ? 'Memuat kategori...' : 'Kategori tidak ditemukan'}
+                </Text>
               </View>
             )}
           />
@@ -136,7 +155,7 @@ export default function BarangManagement() {
 
   const [filteredBarang, setFilteredBarang] = useState([]);
 
-  const BASE_URL = 'https://89d8fc5c282c.ngrok-free.app/api/tambah';
+  const BASE_URL = 'https://ef4d352813da.ngrok-free.app/';
 
   useEffect(() => {
     fetchBarang();
@@ -174,10 +193,21 @@ export default function BarangManagement() {
     setLoadingKategori(true);
     try {
       const res = await api.get('/tambah/kategori');
-      setCategoriesApi(res.data.data);
+      console.log('Kategori response:', res.data); // Debug log
+      
+      // Pastikan data kategori tersimpan dengan benar
+      if (res.data && res.data.data) {
+        setCategoriesApi(res.data.data);
+      } else if (res.data && Array.isArray(res.data)) {
+        setCategoriesApi(res.data);
+      } else {
+        console.warn('Format data kategori tidak sesuai:', res.data);
+        setCategoriesApi([]);
+      }
     } catch (error) {
-      console.error(error.response?.data || error.message);
+      console.error('Error fetching kategori:', error.response?.data || error.message);
       Alert.alert('Error', 'Gagal memuat kategori dari server');
+      setCategoriesApi([]); // Set empty array jika error
     } finally {
       setLoadingKategori(false);
     }
@@ -309,57 +339,51 @@ export default function BarangManagement() {
 
   const renderBarang = ({ item }) => (
     <View style={styles.card}>
-      <View style={styles.cardContent}>
-        <View style={styles.imageContainer}>
-          {item.foto_barang ? (
-            <Image
-              source={{ uri: item.foto_barang }}
-              style={styles.image}
-            />
-          ) : (
-            <View
-              style={[
-                styles.image,
-                {
-                  backgroundColor: '#ccc',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-              ]}
-            >
-              <Text style={{ color: '#666' }}>No Image</Text>
-            </View>
-          )}
-          <View style={styles.stockBadge}>
-            <Text style={styles.stockText}>{item.stok_barang}</Text>
+      <View style={styles.cardImageSection}>
+        {item.foto_barang ? (
+          <Image
+            source={{ uri: item.foto_barang }}
+            style={styles.cardImage}
+          />
+        ) : (
+          <View style={styles.cardImagePlaceholder}>
+            <Text style={styles.imagePlaceholderIcon}>📦</Text>
+            <Text style={styles.imagePlaceholderText}>No Image</Text>
           </View>
+        )}
+        <View style={styles.stockIndicator}>
+          <Text style={styles.stockText}>Stock: {item.stok_barang}</Text>
         </View>
+      </View>
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.title} numberOfLines={2}>
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
             {item.nama_barang}
           </Text>
-          <Text style={styles.price}>{formatRupiah(item.harga_barang)}</Text>
+          <Text style={styles.cardPrice}>{formatRupiah(item.harga_barang)}</Text>
+        </View>
 
-          <View style={styles.actionContainer}>
-            <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
-              <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.actionBtnGradient}>
-                <Text style={styles.actionBtnText}>✏️ Edit</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+        <View style={styles.cardActions}>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.editButton]} 
+            onPress={() => openEdit(item)}
+          >
+            <Text style={styles.editButtonText}>Edit</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteBarang(item.id)}>
-              <LinearGradient colors={['#f44336', '#d32f2f']} style={styles.actionBtnGradient}>
-                <Text style={styles.actionBtnText}>🗑️ Hapus</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={[styles.actionButton, styles.deleteButton]} 
+            onPress={() => handleDeleteBarang(item.id)}
+          >
+            <Text style={styles.deleteButtonText}>Hapus</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 
-  // Modal Form Component - Fixed keyboard issue
+  // Modal Form Component
   const ModalForm = ({ visible, onClose, onSubmit, title, subtitle, buttonText, isEdit = false }) => (
     <Modal
       visible={visible}
@@ -367,34 +391,37 @@ export default function BarangManagement() {
       presentationStyle="fullScreen"
       onRequestClose={onClose}
     >
-      <View style={styles.fullScreenModal}>
-        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{title}</Text>
-              <Text style={styles.modalSubtitle}>{subtitle}</Text>
+              <View style={styles.modalTitleSection}>
+                <Text style={styles.modalTitle}>{title}</Text>
+                <Text style={styles.modalSubtitle}>{subtitle}</Text>
+              </View>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Text style={styles.closeButtonText}>×</Text>
+              </TouchableOpacity>
             </View>
 
             <ScrollView 
-              style={styles.formScrollContainer}
-              contentContainerStyle={styles.formContainer}
+              style={styles.modalScrollView}
+              contentContainerStyle={styles.modalContent}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="always"
-              nestedScrollEnabled={true}
             >
-              <View style={styles.inputGroup}>
+              <View style={styles.inputSection}>
                 <Text style={styles.inputLabel}>Nama Barang</Text>
                 <TextInput
-                  style={styles.input}
+                  style={styles.textInput}
                   placeholder="Masukkan nama barang"
                   value={barangForm.nama}
                   onChangeText={(text) => setBarangForm({ ...barangForm, nama: text })}
                   placeholderTextColor="#999"
-                  returnKeyType="next"
                 />
               </View>
 
-              <View style={styles.inputGroup}>
+              <View style={styles.inputSection}>
                 <Text style={styles.inputLabel}>Kategori</Text>
                 <CustomSelect
                   data={categoriesApi}
@@ -406,94 +433,90 @@ export default function BarangManagement() {
               </View>
 
               <View style={styles.inputRow}>
-                <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                <View style={[styles.inputSection, { flex: 1, marginRight: 8 }]}>
                   <Text style={styles.inputLabel}>Harga</Text>
                   <TextInput
-                    style={styles.input}
+                    style={styles.textInput}
                     placeholder="0"
                     value={barangForm.harga}
                     onChangeText={(text) => setBarangForm({ ...barangForm, harga: text })}
                     keyboardType="numeric"
                     placeholderTextColor="#999"
-                    returnKeyType="next"
                   />
                 </View>
 
-                <View style={[styles.inputGroup, { flex: 1, marginLeft: 10 }]}>
+                <View style={[styles.inputSection, { flex: 1, marginLeft: 8 }]}>
                   <Text style={styles.inputLabel}>Stok</Text>
                   <TextInput
-                    style={styles.input}
+                    style={styles.textInput}
                     placeholder="0"
                     value={barangForm.stok}
                     onChangeText={(text) => setBarangForm({ ...barangForm, stok: text })}
                     keyboardType="numeric"
                     placeholderTextColor="#999"
-                    returnKeyType="done"
                   />
                 </View>
               </View>
 
-              <View style={styles.inputGroup}>
+              <View style={styles.inputSection}>
                 <Text style={styles.inputLabel}>Gambar Barang</Text>
-                <TouchableOpacity style={styles.imagePickerBtn} onPress={handleImagePicker}>
-                  <LinearGradient colors={['#e3f2fd', '#bbdefb']} style={styles.imagePickerGradient}>
+                <TouchableOpacity style={styles.imagePickerButton} onPress={handleImagePicker}>
+                  <View style={styles.imagePickerContent}>
                     <Text style={styles.imagePickerIcon}>📷</Text>
                     <Text style={styles.imagePickerText}>
                       {isEdit ? 'Ubah Gambar' : 'Pilih Gambar'}
                     </Text>
-                  </LinearGradient>
+                  </View>
                 </TouchableOpacity>
                 
                 {barangForm.gambar && (
-                  <View style={styles.imagePreviewContainer}>
+                  <View style={styles.imagePreview}>
                     <Image source={{ uri: barangForm.gambar }} style={styles.previewImage} />
                   </View>
                 )}
               </View>
 
-              {/* Extra space for keyboard */}
               <View style={{ height: 120 }} />
             </ScrollView>
 
-            {/* Action Buttons - Fixed at bottom */}
-            <View style={styles.stableModalActions}>
+            <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={styles.modalBtn} 
+                style={[styles.modalButton, styles.cancelButton]} 
                 onPress={() => {
                   resetForm();
                   onClose();
                 }}
               >
-                <LinearGradient colors={['#9e9e9e', '#757575']} style={styles.modalBtnGradient}>
-                  <Text style={styles.modalBtnText}>Batal</Text>
-                </LinearGradient>
+                <Text style={styles.cancelButtonText}>Batal</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.modalBtn} onPress={onSubmit}>
-                <LinearGradient 
-                  colors={isEdit ? ['#FF9800', '#F57C00'] : ['#4CAF50', '#45a049']} 
-                  style={styles.modalBtnGradient}
-                >
-                  <Text style={styles.modalBtnText}>{buttonText}</Text>
-                </LinearGradient>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.submitButton]} 
+                onPress={onSubmit}
+              >
+                <Text style={styles.submitButtonText}>{buttonText}</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </LinearGradient>
-      </View>
+        </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#667eea', '#764ba2']} style={styles.header}>
+      {/* Header */}
+      <View style={styles.header}>
         <Text style={styles.headerTitle}>Barang Management</Text>
         <Text style={styles.headerSubtitle}>Kelola data barang Anda</Text>
-      </LinearGradient>
+      </View>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchWrapper}>
-          <Text style={styles.searchIcon}>🔍</Text>
+      {/* Search */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <View style={styles.searchIconWrapper}>
+            <Text style={styles.searchIcon}>🔍</Text>
+          </View>
           <TextInput
             style={styles.searchInput}
             placeholder="Cari barang..."
@@ -504,29 +527,28 @@ export default function BarangManagement() {
         </View>
       </View>
 
+      {/* Content */}
       <FlatList
         data={filteredBarang}
         keyExtractor={item => item.id.toString()}
         renderItem={renderBarang}
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
+          <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>📦</Text>
-            <Text style={styles.emptyText}>Belum ada barang</Text>
-            <Text style={styles.emptySubtext}>Tambahkan barang pertama Anda</Text>
+            <Text style={styles.emptyTitle}>Belum ada barang</Text>
+            <Text style={styles.emptySubtitle}>Tambahkan barang pertama Anda</Text>
           </View>
         )}
       />
 
-      {/* Add Button */}
+      {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => setShowAddBarang(true)}>
-        <LinearGradient colors={['#667eea', '#764ba2']} style={styles.fabGradient}>
-          <Text style={styles.fabIcon}>+</Text>
-        </LinearGradient>
+        <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
 
-      {/* Add Modal */}
+      {/* Modals */}
       <ModalForm
         visible={showAddBarang}
         onClose={() => setShowAddBarang(false)}
@@ -537,7 +559,6 @@ export default function BarangManagement() {
         isEdit={false}
       />
 
-      {/* Edit Modal */}
       <ModalForm
         visible={showEditBarang}
         onClose={() => setShowEditBarang(false)}
@@ -556,143 +577,159 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  
+  // Header
   header: {
-    paddingTop: StatusBar.currentHeight || 44,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingTop: StatusBar.currentHeight + 20 || 64,
+    paddingBottom: 24,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: 'white',
+    color: '#1a1a1a',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
+    color: '#666',
     fontWeight: '400',
   },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    marginTop: 20,
+
+  // Search
+  searchSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
   },
-  searchWrapper: {
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    height: 48,
+  },
+  searchIconWrapper: {
+    marginRight: 12,
   },
   searchIcon: {
-    fontSize: 18,
-    marginRight: 12,
+    fontSize: 16,
+    color: '#666',
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 16,
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#1a1a1a',
   },
-  listContainer: {
-    paddingHorizontal: 20,
+
+  // List
+  listContent: {
+    padding: 24,
     paddingBottom: 100,
   },
+
+  // Card
   card: {
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  cardContent: {
-    flexDirection: 'row',
-    padding: 16,
-  },
-  imageContainer: {
+  cardImageSection: {
     position: 'relative',
-    marginRight: 16,
+    height: 160,
   },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+  cardImage: {
+    width: '100%',
+    height: 160,
     backgroundColor: '#f5f5f5',
   },
-  stockBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#667eea',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
+  cardImagePlaceholder: {
+    width: '100%',
+    height: 160,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 6,
+  },
+  imagePlaceholderIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  imagePlaceholderText: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '500',
+  },
+  stockIndicator: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
   stockText: {
-    color: 'white',
+    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
-  infoContainer: {
-    flex: 1,
-    justifyContent: 'space-between',
+  cardContent: {
+    padding: 16,
   },
-  title: {
+  cardHeader: {
+    marginBottom: 16,
+  },
+  cardTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#2c3e50',
-    marginBottom: 4,
-  },
-  desc: {
-    fontSize: 14,
-    color: '#7f8c8d',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  price: {
-    fontSize: 16,
     fontWeight: '600',
-    color: '#27ae60',
-    marginBottom: 12,
+    color: '#1a1a1a',
+    marginBottom: 4,
+    lineHeight: 24,
   },
-  actionContainer: {
+  cardPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2d7d32',
+  },
+  cardActions: {
     flexDirection: 'row',
     gap: 8,
   },
-  editBtn: {
+  actionButton: {
     flex: 1,
+    paddingVertical: 12,
     borderRadius: 8,
-    overflow: 'hidden',
-  },
-  deleteBtn: {
-    flex: 1,
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  actionBtnGradient: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
     alignItems: 'center',
   },
-  actionBtnText: {
-    color: 'white',
-    fontSize: 12,
+  editButton: {
+    backgroundColor: '#e3f2fd',
+  },
+  editButtonText: {
+    color: '#1976d2',
+    fontSize: 14,
     fontWeight: '600',
   },
-  emptyContainer: {
+  deleteButton: {
+    backgroundColor: '#ffebee',
+  },
+  deleteButtonText: {
+    color: '#d32f2f',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Empty State
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
@@ -700,90 +737,97 @@ const styles = StyleSheet.create({
   emptyIcon: {
     fontSize: 64,
     marginBottom: 16,
+    opacity: 0.5,
   },
-  emptyText: {
+  emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#7f8c8d',
+    color: '#666',
     marginBottom: 8,
   },
-  emptySubtext: {
+  emptySubtitle: {
     fontSize: 14,
-    color: '#bdc3c7',
+    color: '#999',
     textAlign: 'center',
   },
+
+  // FAB
   fab: {
     position: 'absolute',
-    right: 20,
-    bottom: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    shadowColor: '#667eea',
+    right: 24,
+    bottom: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#1976d2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#1976d2',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
-  fabGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   fabIcon: {
-    fontSize: 28,
-    color: 'white',
+    fontSize: 24,
+    color: '#fff',
     fontWeight: '300',
   },
-  
-  // Fixed Modal Styles - Stable keyboard handling
-  fullScreenModal: {
+
+  // Modal
+  modalOverlay: {
     flex: 1,
-    backgroundColor: '#000000aa',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalContainer: {
     flex: 1,
-  },
-  modalContent: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
+    marginTop: 60,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    marginTop: 60,
   },
   modalHeader: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    backgroundColor: '#f8f9fa',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  modalTitleSection: {
+    flex: 1,
   },
   modalTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#2c3e50',
-    marginBottom: 8,
+    color: '#1a1a1a',
+    marginBottom: 4,
   },
   modalSubtitle: {
     fontSize: 16,
-    color: '#7f8c8d',
-    textAlign: 'center',
+    color: '#666',
   },
-  formScrollContainer: {
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 16,
+  },
+  closeButtonText: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: '300',
+  },
+  modalScrollView: {
     flex: 1,
   },
-  formContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+  modalContent: {
+    paddingHorizontal: 24,
   },
-  inputGroup: {
+  inputSection: {
     marginBottom: 20,
   },
   inputRow: {
@@ -792,35 +836,31 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#1a1a1a',
     marginBottom: 8,
   },
-  input: {
-    backgroundColor: 'white',
+  textInput: {
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#1a1a1a',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    borderColor: '#e9ecef',
   },
-  imagePickerBtn: {
+  imagePickerButton: {
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
     overflow: 'hidden',
-    marginBottom: 12,
   },
-  imagePickerGradient: {
+  imagePickerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    paddingHorizontal: 20,
   },
   imagePickerIcon: {
     fontSize: 20,
@@ -828,171 +868,180 @@ const styles = StyleSheet.create({
   },
   imagePickerText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#1976d2',
   },
-  imagePreviewContainer: {
-    alignItems: 'center',
+  imagePreview: {
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   previewImage: {
     width: '100%',
     height: 200,
-    borderRadius: 12,
     backgroundColor: '#f5f5f5',
   },
-  
-  // Stable Action Buttons - Always visible
-  stableModalActions: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  modalActions: {
     flexDirection: 'row',
     gap: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-    backgroundColor: '#f8f9fa',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#f0f0f0',
   },
-  modalBtn: {
+  modalButton: {
     flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  modalBtnGradient: {
     paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  modalBtnText: {
-    color: 'white',
+  cancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  cancelButtonText: {
+    color: '#666',
     fontSize: 16,
     fontWeight: '600',
   },
-  
-  // Custom Select2-like Styles
+  submitButton: {
+    backgroundColor: '#1976d2',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Custom Select
   customSelectButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e9ecef',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
   },
   customSelectText: {
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#1a1a1a',
     flex: 1,
   },
   customSelectPlaceholder: {
     color: '#999',
   },
+  selectArrowContainer: {
+    marginLeft: 8,
+  },
   customSelectArrow: {
     fontSize: 12,
-    color: '#7f8c8d',
-    marginLeft: 8,
+    color: '#666',
   },
   selectModalContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
   },
   selectModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 16,
     paddingTop: StatusBar.currentHeight + 16 || 60,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
   },
   selectModalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2c3e50',
+    color: '#1a1a1a',
   },
   selectModalClose: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
   },
   selectModalCloseText: {
-    fontSize: 16,
-    color: '#7f8c8d',
-    fontWeight: '600',
+    fontSize: 20,
+    color: '#666',
+    fontWeight: '300',
   },
   selectSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    margin: 20,
-    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+    margin: 24,
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  searchIconContainer: {
+    marginRight: 12,
   },
   selectSearchIcon: {
     fontSize: 16,
-    marginRight: 12,
+    color: '#666',
   },
   selectSearchInput: {
     flex: 1,
-    paddingVertical: 14,
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#1a1a1a',
   },
   selectOptionItem: {
-    backgroundColor: 'white',
-    paddingHorizontal: 20,
+    backgroundColor: '#fff',
+    paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#f5f5f5',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   selectOptionSelected: {
     backgroundColor: '#e3f2fd',
-    borderLeftWidth: 4,
-    borderLeftColor: '#667eea',
+    borderLeftWidth: 3,
+    borderLeftColor: '#1976d2',
   },
   selectOptionText: {
     fontSize: 16,
-    color: '#2c3e50',
+    color: '#1a1a1a',
     flex: 1,
   },
   selectOptionTextSelected: {
-    color: '#667eea',
+    color: '#1976d2',
     fontWeight: '600',
   },
+  checkmarkContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#1976d2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   selectOptionCheck: {
-    fontSize: 16,
-    color: '#667eea',
+    fontSize: 12,
+    color: '#fff',
     fontWeight: '600',
   },
   selectEmptyContainer: {
     padding: 40,
     alignItems: 'center',
   },
+  selectEmptyIcon: {
+    fontSize: 32,
+    marginBottom: 12,
+    opacity: 0.5,
+  },
   selectEmptyText: {
     fontSize: 16,
-    color: '#7f8c8d',
+    color: '#666',
     textAlign: 'center',
   },
 });
