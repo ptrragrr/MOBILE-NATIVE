@@ -80,9 +80,9 @@ export default function LoginScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       <LinearGradient
-        colors={['#667eea', '#764ba2', '#f093fb']}
+        colors={['#fafafa', '#f5f5f5', '#efefef']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
@@ -103,7 +103,7 @@ export default function LoginScreen() {
             <View style={styles.header}>
               <View style={styles.logoContainer}>
                 <View style={styles.logo}>
-                  <Text style={styles.logoText}>🚀</Text>
+                  <Text style={styles.logoText}>🔒</Text>
                 </View>
               </View>
               <Text style={styles.welcomeText}>Selamat Datang Kembali!</Text>
@@ -127,7 +127,7 @@ export default function LoginScreen() {
                       focusedInput === 'username' && styles.inputSimpleFocused
                     ]}
                     placeholder="Masukkan username"
-                    placeholderTextColor="#a0a0a0"
+                    placeholderTextColor="#9ca3af"
                     value={username}
                     onChangeText={setUsername}
                     onFocus={() => setFocusedInput('username')}
@@ -153,7 +153,7 @@ export default function LoginScreen() {
                       focusedInput === 'password' && styles.inputSimpleFocused
                     ]}
                     placeholder="Masukkan password"
-                    placeholderTextColor="#a0a0a0"
+                    placeholderTextColor="#9ca3af"
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
@@ -174,7 +174,7 @@ export default function LoginScreen() {
                   activeOpacity={0.8}
                 >
                   <LinearGradient
-                    colors={loading ? ['#e0e0e0', '#bdbdbd'] : ['#667eea', '#764ba2']}
+                    colors={loading ? ['#e5e7eb', '#d1d5db'] : ['#374151', '#1f2937']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={styles.buttonGradient}
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(0, 0, 0, 0.02)',
   },
   decorativeCircle2: {
     position: 'absolute',
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
   },
   decorativeCircle3: {
     position: 'absolute',
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
   },
 
   // Header
@@ -277,111 +277,114 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
   },
   logoText: {
-    fontSize: 36,
+    fontSize: 32,
   },
   welcomeText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: 'white',
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#1f2937',
     marginBottom: 8,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   subtitle: {
-    fontSize: 16,
-    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 15,
+    color: '#6b7280',
     textAlign: 'center',
     fontWeight: '400',
   },
 
   // Form
   formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderRadius: 28,
-    padding: 32,
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 28,
     marginHorizontal: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
   },
   form: {
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#4a5568',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
     marginBottom: 8,
-    marginLeft: 4,
-    transition: 'color 0.2s',
+    marginLeft: 2,
   },
   inputLabelFocused: {
-    color: '#667eea',
+    color: '#1f2937',
   },
   
   // Input Styles - Simplified
   inputSimple: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#2d3748',
-    fontWeight: '500',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    minHeight: 56,
+    backgroundColor: '#f9fafb',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#1f2937',
+    fontWeight: '400',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    minHeight: 50,
   },
   inputSimpleFocused: {
-    borderColor: '#667eea',
+    borderColor: '#9ca3af',
     backgroundColor: '#ffffff',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
 
   // Button
   loginButton: {
-    borderRadius: 16,
+    borderRadius: 12,
     marginTop: 8,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 4,
   },
   loginButtonDisabled: {
     shadowOpacity: 0,
     elevation: 0,
   },
   buttonGradient: {
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   loginButtonText: {
-    color: 'white',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 
   // Divider
@@ -393,13 +396,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#e5e7eb',
   },
   dividerText: {
     marginHorizontal: 16,
-    color: '#a0aec0',
-    fontSize: 14,
-    fontWeight: '500',
+    color: '#9ca3af',
+    fontSize: 13,
+    fontWeight: '400',
   },
 
   // Additional Options
@@ -411,9 +414,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   optionText: {
-    color: '#667eea',
-    fontSize: 15,
-    fontWeight: '600',
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '500',
   },
 
   // Footer
@@ -423,14 +426,14 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   footerText: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 8,
+    color: '#9ca3af',
+    fontSize: 13,
+    fontWeight: '400',
+    marginBottom: 6,
   },
   copyrightText: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#d1d5db',
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '300',
   },
 });

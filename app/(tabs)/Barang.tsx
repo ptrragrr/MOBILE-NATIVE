@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-import api from './axios';
+import api from '../axios';
 
 const BarangManagementSimple = () => {
   const [barangList, setBarangList] = useState([]);
