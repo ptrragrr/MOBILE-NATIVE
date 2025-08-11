@@ -1,15 +1,15 @@
 import { useRouter } from 'expo-router';
 import React, { useContext, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
 
@@ -28,7 +28,7 @@ export default function ProfilePage() {
     phone: '+62 812-3456-7890',
     position: 'Store Manager',
     joinDate: '15 Januari 2023',
-    profilePhoto: 'https://via.placeholder.com/150/FB7185/FFFFFF?text=AW'
+    profilePhoto: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=AW'
   });
 
   const [editedData, setEditedData] = useState(userData);
@@ -133,7 +133,7 @@ export default function ProfilePage() {
               <Image 
                 source={{ uri: userData.profilePhoto }} 
                 style={styles.avatarImage}
-                defaultSource={{ uri: 'https://via.placeholder.com/150/FB7185/FFFFFF?text=AW' }}
+                defaultSource={{ uri: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=AW' }}
               />
               {isEditing && (
                 <View style={styles.editPhotoOverlay}>
@@ -155,37 +155,6 @@ export default function ProfilePage() {
             </View>
           </View>
         </View>
-
-        {/* Performance Stats */}
-        {/* <View style={styles.sectionContainer}>
-          <Text style={styles.sectionTitle}>📊 Performa Saya</Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{formatRupiah(userStats.totalSales)}</Text>
-              <Text style={styles.statLabel}>Total Penjualan</Text>
-              <Text style={styles.statIcon}>💰</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userStats.totalTransactions.toLocaleString()}</Text>
-              <Text style={styles.statLabel}>Total Transaksi</Text>
-              <Text style={styles.statIcon}>🛒</Text>
-            </View>
-          </View>
-
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{userStats.workingDays}</Text>
-              <Text style={styles.statLabel}>Hari Kerja</Text>
-              <Text style={styles.statIcon}>📈</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{formatRupiah(userStats.avgDailySales)}</Text>
-              <Text style={styles.statLabel}>Rata-rata Harian</Text>
-              <Text style={styles.statIcon}>📊</Text>
-            </View>
-          </View>
-        </View> */}
 
         {/* Personal Information */}
         <View style={styles.sectionContainer}>
@@ -222,7 +191,7 @@ export default function ProfilePage() {
               <Image 
                 source={{ uri: userData.profilePhoto }} 
                 style={styles.previewPhoto}
-                defaultSource={{ uri: 'https://via.placeholder.com/150/FB7185/FFFFFF?text=AW' }}
+                defaultSource={{ uri: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=AW' }}
               />
               {isEditing && (
                 <TouchableOpacity style={styles.changePhotoButton}>
@@ -392,7 +361,7 @@ export default function ProfilePage() {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: '#FFF1F2' 
+    backgroundColor: '#F0F4F8' // Changed from pink to light blue-gray
   },
   header: {
     marginTop: 50,
@@ -413,18 +382,18 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 20,
-    color: '#374151',
+    color: '#2D3748',
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1A202C',
   },
   editButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 2,
@@ -456,7 +425,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
   },
   editPhotoOverlay: {
     position: 'absolute',
@@ -487,7 +456,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 14,
-    color: '#10B981',
+    color: '#48BB78', // Changed to green
   },
   profileInfo: {
     alignItems: 'center',
@@ -495,12 +464,12 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1A202C',
     marginBottom: 4,
   },
   profilePosition: {
     fontSize: 16,
-    color: '#FB7185',
+    color: '#4F46E5', // Changed from pink to indigo
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -514,7 +483,7 @@ const styles = StyleSheet.create({
   },
   joinDate: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#718096',
   },
   sectionContainer: {
     backgroundColor: '#FFFFFF',
@@ -526,7 +495,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1A202C',
     marginBottom: 16,
   },
   statsRow: {
@@ -536,7 +505,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#EDF2F7', // Changed to light gray
     borderRadius: 12,
     padding: 16,
     marginHorizontal: 4,
@@ -545,13 +514,13 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1A202C',
     marginBottom: 4,
     textAlign: 'center',
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#718096',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -564,28 +533,28 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#2D3748',
     marginBottom: 8,
   },
   fieldValue: {
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1A202C',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F7FAFC',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   fieldInput: {
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1A202C',
     paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#FB7185',
+    borderColor: '#4F46E5', // Changed from pink to indigo
   },
   multilineInput: {
     height: 80,
@@ -597,7 +566,7 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#EDF2F7',
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -607,16 +576,16 @@ const styles = StyleSheet.create({
   cancelIcon: {
     fontSize: 16,
     marginRight: 8,
-    color: '#6B7280',
+    color: '#718096',
   },
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#718096',
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -639,7 +608,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#EDF2F7', // Changed to light gray
     borderRadius: 12,
     marginBottom: 12,
   },
@@ -651,19 +620,19 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    color: '#374151',
+    color: '#2D3748',
   },
   actionArrow: {
     fontSize: 16,
-    color: '#9CA3AF',
+    color: '#A0AEC0',
   },
   logoutAction: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FED7D7', // Changed to light red
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#FEB2B2',
   },
   logoutText: {
-    color: '#DC2626',
+    color: '#E53E3E', // Changed to red
   },
   footerPadding: {
     height: 40,
@@ -675,17 +644,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F7FAFC',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   previewPhoto: {
     width: 60,
     height: 60,
     borderRadius: 30,
     marginRight: 16,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
   },
   changePhotoButton: {
     flex: 1,
@@ -693,7 +662,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
     borderRadius: 8,
   },
   changePhotoIcon: {
@@ -726,7 +695,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1A202C',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -736,17 +705,17 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#374151',
+    color: '#2D3748',
     marginBottom: 8,
   },
   passwordInput: {
     fontSize: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F7FAFC',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   passwordModalActions: {
     flexDirection: 'row',
@@ -755,7 +724,7 @@ const styles = StyleSheet.create({
   },
   passwordCancelButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#EDF2F7',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -763,11 +732,11 @@ const styles = StyleSheet.create({
   passwordCancelText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6B7280',
+    color: '#718096',
   },
   passwordSaveButton: {
     flex: 1,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -795,7 +764,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FB7185',
+    backgroundColor: '#4F46E5', // Changed from pink to indigo
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
@@ -811,13 +780,13 @@ const styles = StyleSheet.create({
   logoutModalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1A202C',
     textAlign: 'center',
     marginBottom: 8,
   },
   logoutModalMessage: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#718096',
     textAlign: 'center',
     lineHeight: 24,
   },
@@ -829,7 +798,7 @@ const styles = StyleSheet.create({
   },
   stayButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#EDF2F7',
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',
@@ -837,11 +806,11 @@ const styles = StyleSheet.create({
   stayButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#2D3748',
   },
   logoutConfirmButton: {
     flex: 1,
-    backgroundColor: '#EF4444',
+    backgroundColor: '#E53E3E', // Changed to red
     borderRadius: 16,
     paddingVertical: 16,
     alignItems: 'center',

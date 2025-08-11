@@ -1,28 +1,96 @@
+// app/(tabs)/Dashboard.tsx
 import { useRouter } from 'expo-router';
-import React, { useContext, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../axios'; // axios.ts berada di app/
 
-const formatRupiah = (amount) => {
-  const number = typeof amount === 'string' ? parseFloat(amount) : amount;
-  if (isNaN(number)) return 'Rp 0';
+const formatRupiah = (amount: number | string | null | undefined) => {
+  const number = typeof amount === 'string' ? parseFloat(amount) : amount ?? 0;
+  if (isNaN(Number(number))) return 'Rp 0';
   try {
-    return 'Rp ' + number.toLocaleString('id-ID');
+    return 'Rp ' + Number(number).toLocaleString('id-ID');
   } catch (error) {
-    const formatted = number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const formatted = String(number).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     return 'Rp ' + formatted;
   }
+};
+
+type Transaction = {
+  id: string;
+  time?: string;
+  amount: number;
+  customer?: string;
+  date?: string;
+  status?: 'success' | 'cancelled' | string;
+  items?: string;
 };
 
 export default function Dashboard() {
   const router = useRouter();
   const { setIsLoggedIn } = useContext(AuthContext);
+
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  const handleLogoutPress = () => {
-    setShowLogoutModal(true);
+  const [todaySales, setTodaySales] = useState<number>(0);
+  const [todayTransactions, setTodayTransactions] = useState<number>(0);
+  const [totalProducts, setTotalProducts] = useState<number>(0);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [salesHistory, setSalesHistory] = useState<Transaction[]>([]);
+
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/barang'); // pastikan route /api/dashboard ada
+
+      // fallback kalau struktur berbeda
+      const data = res.data ?? {};
+
+      setTodaySales(data.today_sales ?? 0);
+      setTodayTransactions(data.today_transactions ?? 0);
+      setTotalProducts(data.total_products ?? 0);
+
+      // Pastikan arrays selalu ada
+      setRecentTransactions(Array.isArray(data.recent_transactions) ? data.recent_transactions : []);
+      setSalesHistory(Array.isArray(data.sales_history) ? data.sales_history : []);
+    } catch (err: any) {
+      console.error('Gagal ambil data dashboard', err);
+      // tampilkan pesan singkat ke user
+      if (err?.response) {
+        // server response available
+        const status = err.response.status;
+        if (status === 404) {
+          Alert.alert('Error 404', 'Endpoint /dashboard tidak ditemukan. Periksa route API Laravel.');
+        } else {
+          Alert.alert(`Error ${status}`, err.response?.data?.message ?? 'Gagal ambil data dari server.');
+        }
+      } else if (err?.request) {
+        Alert.alert('Network Error', 'Tidak dapat terhubung ke server. Periksa koneksi / baseURL.');
+      } else {
+        Alert.alert('Error', 'Terjadi kesalahan saat mengambil data.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchDashboardData();
+    // Kamu bisa tambahkan dependency untuk refresh berkala
+    // atau pull-to-refresh implementasi bila perlu
+  }, []);
 
   const handleConfirmLogout = () => {
     setShowLogoutModal(false);
@@ -30,43 +98,14 @@ export default function Dashboard() {
     router.replace('/AuthStack/LoginScreen');
   };
 
-  const handleCancelLogout = () => {
-    setShowLogoutModal(false);
-  };
-
-  const handleOpenHistory = () => {
-    setShowHistoryModal(true);
-  };
-
-  const handleCloseHistory = () => {
-    setShowHistoryModal(false);
-  };
-
-  const todaySales = 2450000;
-  const todayTransactions = 47;
-  const totalProducts = 156;
-
-  const recentTransactions = [
-    { id: '#001', time: '14:30', amount: 125000, customer: 'Ahmad S.', date: '2024-08-07', status: 'success' },
-    { id: '#002', time: '14:15', amount: 85000, customer: 'Sari M.', date: '2024-08-07', status: 'success' },
-    { id: '#003', time: '13:45', amount: 165000, customer: 'Budi P.', date: '2024-08-07', status: 'success' },
-    { id: '#004', time: '13:20', amount: 95000, customer: 'Lisa A.', date: '2024-08-07', status: 'success' },
-  ];
-
-  const salesHistory = [
-    { id: '#001', time: '14:30', amount: 125000, customer: 'Ahmad S.', date: '2024-08-07', status: 'success', items: 'Kopi Arabica, Roti Bakar' },
-    { id: '#002', time: '14:15', amount: 85000, customer: 'Sari M.', date: '2024-08-07', status: 'success', items: 'Teh Hijau, Biskuit' },
-    { id: '#003', time: '13:45', amount: 165000, customer: 'Budi P.', date: '2024-08-07', status: 'success', items: 'Susu UHT, Kopi, Snack' },
-    { id: '#004', time: '13:20', amount: 95000, customer: 'Lisa A.', date: '2024-08-07', status: 'success', items: 'Roti Tawar, Selai' },
-    { id: '#005', time: '12:45', amount: 75000, customer: 'Dedi R.', date: '2024-08-07', status: 'success', items: 'Air Mineral, Permen' },
-    { id: '#006', time: '12:30', amount: 145000, customer: 'Nina K.', date: '2024-08-07', status: 'success', items: 'Kopi Premium, Cake' },
-    { id: '#007', time: '11:15', amount: 65000, customer: 'Tono S.', date: '2024-08-06', status: 'success', items: 'Teh Botol, Kerupuk' },
-    { id: '#008', time: '10:30', amount: 185000, customer: 'Maya L.', date: '2024-08-06', status: 'success', items: 'Paket Sarapan' },
-    { id: '#009', time: '09:45', amount: 95000, customer: 'Andi P.', date: '2024-08-06', status: 'success', items: 'Jus Jeruk, Sandwich' },
-    { id: '#010', time: '16:20', amount: 115000, customer: 'Siska M.', date: '2024-08-05', status: 'success', items: 'Kopi Latte, Donut' },
-    { id: '#011', time: '15:45', amount: 85000, customer: 'Bambang H.', date: '2024-08-05', status: 'cancelled', items: 'Teh Tarik' },
-    { id: '#012', time: '14:30', amount: 155000, customer: 'Rina D.', date: '2024-08-05', status: 'success', items: 'Paket Makan Siang' },
-  ];
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ marginTop: 8, color: '#64748B' }}>Memuat data...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -76,10 +115,7 @@ export default function Dashboard() {
           <Text style={styles.title}>Dashboard</Text>
           <Text style={styles.subtitle}>Toko Sejahtera</Text>
         </View>
-        <TouchableOpacity 
-          onPress={() => router.push('/profile')}
-          style={styles.profileButton}
-        >
+        <TouchableOpacity onPress={() => router.push('/profile')} style={styles.profileButton}>
           <Text style={styles.profileIcon}>👤</Text>
         </TouchableOpacity>
       </View>
@@ -105,26 +141,27 @@ export default function Dashboard() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Transaksi Terbaru</Text>
-            <TouchableOpacity 
-              onPress={handleOpenHistory}
-              style={styles.viewAllButton}
-            >
+            <TouchableOpacity onPress={() => setShowHistoryModal(true)} style={styles.viewAllButton}>
               <Text style={styles.viewAllText}>Lihat Semua</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.transactionsList}>
-            {recentTransactions.map((transaction, index) => (
-              <View key={index} style={styles.transactionItem}>
-                <View>
-                  <Text style={styles.transactionId}>{transaction.id}</Text>
-                  <Text style={styles.transactionCustomer}>{transaction.customer}</Text>
+            {recentTransactions.length === 0 ? (
+              <Text style={{ color: '#94A3B8' }}>Belum ada transaksi</Text>
+            ) : (
+              recentTransactions.map((transaction) => (
+                <View key={transaction.id} style={styles.transactionItem}>
+                  <View>
+                    <Text style={styles.transactionId}>{transaction.id}</Text>
+                    <Text style={styles.transactionCustomer}>{transaction.customer ?? '-'}</Text>
+                  </View>
+                  <View style={styles.transactionRight}>
+                    <Text style={styles.transactionAmount}>{formatRupiah(transaction.amount)}</Text>
+                    <Text style={styles.transactionTime}>{transaction.time ?? ''}</Text>
+                  </View>
                 </View>
-                <View style={styles.transactionRight}>
-                  <Text style={styles.transactionAmount}>{formatRupiah(transaction.amount)}</Text>
-                  <Text style={styles.transactionTime}>{transaction.time}</Text>
-                </View>
-              </View>
-            ))}
+              ))
+            )}
           </View>
         </View>
 
@@ -132,54 +169,51 @@ export default function Dashboard() {
       </ScrollView>
 
       {/* History Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showHistoryModal}
-        onRequestClose={handleCloseHistory}
-      >
+      <Modal animationType="slide" transparent={true} visible={showHistoryModal} onRequestClose={() => setShowHistoryModal(false)}>
         <View style={styles.historyModalOverlay}>
           <View style={styles.historyModalContainer}>
             {/* Header */}
             <View style={styles.historyHeader}>
               <Text style={styles.historyTitle}>History Penjualan</Text>
-              <TouchableOpacity 
-                onPress={handleCloseHistory}
-                style={styles.closeButton}
-              >
+              <TouchableOpacity onPress={() => setShowHistoryModal(false)} style={styles.closeButton}>
                 <Text style={styles.closeButtonText}>×</Text>
               </TouchableOpacity>
             </View>
-            
+
             {/* List */}
             <ScrollView style={styles.historyList}>
-              {salesHistory.map((item, index) => (
-                <View key={index} style={styles.historyCard}>
-                  <View style={styles.cardHeader}>
-                    <Text style={styles.cardId}>{item.id}</Text>
-                    <View style={[styles.badge, {
-                      backgroundColor: item.status === 'success' ? '#DCFCE7' : '#FEE2E2'
-                    }]}>
-                      <Text style={[styles.badgeText, {
-                        color: item.status === 'success' ? '#059669' : '#DC2626'
-                      }]}>
-                        {item.status === 'success' ? 'Berhasil' : 'Dibatalkan'}
-                      </Text>
+              {salesHistory.length === 0 ? (
+                <Text style={{ color: '#94A3B8' }}>Belum ada riwayat penjualan</Text>
+              ) : (
+                salesHistory.map((item) => (
+                  <View key={item.id} style={styles.historyCard}>
+                    <View style={styles.cardHeader}>
+                      <Text style={styles.cardId}>{item.id}</Text>
+                      <View
+                        style={[
+                          styles.badge,
+                          { backgroundColor: item.status === 'success' ? '#DCFCE7' : '#FEE2E2' },
+                        ]}
+                      >
+                        <Text style={[styles.badgeText, { color: item.status === 'success' ? '#059669' : '#DC2626' }]}>
+                          {item.status === 'success' ? 'Berhasil' : 'Dibatalkan'}
+                        </Text>
+                      </View>
                     </View>
+
+                    <Text style={styles.cardCustomer}>{item.customer ?? '-'}</Text>
+                    <Text style={styles.cardItems}>{item.items ?? '-'}</Text>
+                    <Text style={styles.cardDate}>{(item.date ?? '') + (item.time ? ` • ${item.time}` : '')}</Text>
+                    <Text style={styles.cardAmount}>{formatRupiah(item.amount)}</Text>
                   </View>
-                  
-                  <Text style={styles.cardCustomer}>{item.customer}</Text>
-                  <Text style={styles.cardItems}>{item.items}</Text>
-                  <Text style={styles.cardDate}>{item.date} • {item.time}</Text>
-                  <Text style={styles.cardAmount}>{formatRupiah(item.amount)}</Text>
-                </View>
-              ))}
+                ))
+              )}
             </ScrollView>
-            
+
             {/* Footer */}
             <View style={styles.historyFooter}>
               <Text style={styles.footerText}>
-                Total: {salesHistory.filter(t => t.status === 'success').length} transaksi berhasil
+                Total: {salesHistory.filter((t) => t.status === 'success').length} transaksi berhasil
               </Text>
             </View>
           </View>
@@ -187,29 +221,16 @@ export default function Dashboard() {
       </Modal>
 
       {/* Logout Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={showLogoutModal}
-        onRequestClose={handleCancelLogout}
-      >
+      <Modal animationType="fade" transparent={true} visible={showLogoutModal} onRequestClose={() => setShowLogoutModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Keluar dari Dashboard?</Text>
-            <Text style={styles.modalMessage}>
-              Data Anda akan tersimpan dengan aman
-            </Text>
+            <Text style={styles.modalMessage}>Data Anda akan tersimpan dengan aman</Text>
             <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={handleCancelLogout}
-              >
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowLogoutModal(false)}>
                 <Text style={styles.cancelButtonText}>Batal</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.confirmButton} 
-                onPress={handleConfirmLogout}
-              >
+              <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmLogout}>
                 <Text style={styles.confirmButtonText}>Keluar</Text>
               </TouchableOpacity>
             </View>
@@ -221,27 +242,27 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#F8FAFC' 
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    marginTop: 50, 
-    marginBottom: 24, 
+    marginTop: 50,
+    marginBottom: 24,
     marginHorizontal: 20,
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: { 
-    fontSize: 28, 
-    fontWeight: '700', 
-    color: '#1E293B' 
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1E293B',
   },
-  subtitle: { 
-    marginTop: 2, 
-    color: '#64748B', 
-    fontSize: 16 
+  subtitle: {
+    marginTop: 2,
+    color: '#64748B',
+    fontSize: 16,
   },
   profileButton: {
     width: 44,
@@ -259,9 +280,9 @@ const styles = StyleSheet.create({
   profileIcon: {
     fontSize: 20,
   },
-  scrollView: { 
-    flex: 1, 
-    paddingHorizontal: 20 
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   quickStats: {
     backgroundColor: '#FFFFFF',
@@ -357,8 +378,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94A3B8',
   },
-  bottomPadding: { 
-    height: 30 
+  bottomPadding: {
+    height: 30,
   },
 
   // History Modal Styles
