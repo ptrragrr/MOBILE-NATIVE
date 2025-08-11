@@ -1,81 +1,89 @@
-import React, { useState } from 'react';
+// TransactionScreen.js
+import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+  Alert, FlatList, Image,
+  Pressable, ScrollView,
+  StyleSheet, Text, TextInput, View
 } from 'react-native';
+import api from './axios'; // axios instance
 
-export default function TransactionScreen() {
+export default function TransactionScreen({ route }) {
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPayment, setSelectedPayment] = useState('cash');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [customerMoney, setCustomerMoney] = useState('');
-  const [Barang, setBarang] = useState([]);
 
+  // Ambil barang dari API & mapping ke format transaksi
+  const fetchBarang = async () => {
+    try {
+      const res = await api.get('/tambah/barang');
+      console.log("API response:", res.data);
 
-  // Sample products data
-  const products = [
-    { id: '1', nama: 'Kopi Arabica', harga: 25000, stok: 50, foto: '☕', kategori: 'Minuman' },
-    { id: '2', nama: 'Teh Hijau', harga: 15000, stok: 30, foto: '🍃', kategori: 'Minuman' },
-    { id: '3', nama: 'Roti Bakar', harga: 12000, stok: 20, foto: '🍞', kategori: 'Makanan' },
-    { id: '4', nama: 'Susu UHT', harga: 8000, stok: 40, foto: '🥛', kategori: 'Minuman' },
-    { id: '5', nama: 'Es Krim', harga: 18000, stok: 25, foto: '🍦', kategori: 'Dessert' },
-    { id: '6', nama: 'Sandwich', harga: 22000, stok: 15, foto: '🥪', kategori: 'Makanan' },
-    { id: '7', nama: 'Donat', harga: 10000, stok: 35, foto: '🍩', kategori: 'Dessert' },
-    { id: '8', nama: 'Jus Jeruk', harga: 20000, stok: 28, foto: '🍊', kategori: 'Minuman' },
-  ];
+      const rawData = Array.isArray(res.data.data) ? res.data.data : [];
 
-  
+      const mappedData = rawData.map(item => ({
+        id: item.id,
+        nama: item.nama_barang,
+        harga: parseInt(item.harga_barang),
+        stok: item.stok_barang,
+        foto: item.foto_barang
+          ? item.foto_barang.startsWith('http')
+            ? item.foto_barang
+            : `https://your-domain.com/storage/${item.foto_barang}` // ganti dengan domain kamu
+          : null
+      }));
 
-  const formatRupiah = (amount) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+      setProducts(mappedData);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Gagal memuat data barang');
+    }
   };
 
-  const formatRupiahInput = (text) => {
-    const cleaned = text.replace(/\D/g, '');
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(parseInt(cleaned || '0'));
-  };
+  useEffect(() => {
+    fetchBarang();
+  }, []);
+
+  useEffect(() => {
+    if (route?.params?.refresh) {
+      fetchBarang();
+    }
+  }, [route?.params?.refresh]);
+
+  const formatRupiah = (amount) => new Intl.NumberFormat('id-ID', {
+    style: 'currency', currency: 'IDR', minimumFractionDigits: 0
+  }).format(amount);
 
   const filteredProducts = products.filter((item) =>
-    item.nama.toLowerCase().includes(searchQuery.toLowerCase())
+    item.nama?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const addToCart = (product) => {
-    const existingItem = cart.find(item => item.id === product.id);
+  const addToCart = (barang) => {
+    const existingItem = cart.find(item => item.id === barang.id);
     if (existingItem) {
       setCart(cart.map(item =>
-        item.id === product.id
+        item.id === barang.id
           ? { ...item, qty: item.qty + 1 }
           : item
       ));
     } else {
-      setCart([...cart, { ...product, qty: 1 }]);
+      setCart([...cart, { ...barang, qty: 1 }]);
     }
   };
 
   const updateQuantity = (id, change) => {
-    setCart(cart.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(0, item.qty + change);
-        return newQty === 0 ? null : { ...item, qty: newQty };
-      }
-      return item;
-    }).filter(Boolean));
+    setCart(cart
+      .map(item => {
+        if (item.id === id) {
+          const newQty = Math.max(0, item.qty + change);
+          return newQty === 0 ? null : { ...item, qty: newQty };
+        }
+        return item;
+      })
+      .filter(Boolean)
+    );
   };
 
   const removeFromCart = (id) => {
@@ -120,7 +128,15 @@ export default function TransactionScreen() {
 
   const renderProduct = ({ item }) => (
     <Pressable style={styles.productCard} onPress={() => addToCart(item)}>
-      <Text style={styles.productEmoji}>{item.foto}</Text>
+      {item.foto ? (
+        <Image
+          source={{ uri: item.foto }}
+          style={{ width: 50, height: 50, borderRadius: 6, marginBottom: 8 }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text style={styles.productEmoji}>📦</Text>
+      )}
       <Text style={styles.productName}>{item.nama}</Text>
       <Text style={styles.productPrice}>{formatRupiah(item.harga)}</Text>
       <Text style={styles.productStock}>Stok: {item.stok}</Text>
@@ -130,31 +146,30 @@ export default function TransactionScreen() {
   const renderCartItem = ({ item }) => (
     <View style={styles.cartItem}>
       <View style={styles.cartItemInfo}>
-        <Text style={styles.cartItemEmoji}>{item.foto}</Text>
+        {item.foto ? (
+          <Image
+            source={{ uri: item.foto }}
+            style={{ width: 40, height: 40, borderRadius: 4, marginRight: 12 }}
+            resizeMode="cover"
+          />
+        ) : (
+          <Text style={styles.cartItemEmoji}>📦</Text>
+        )}
         <View style={styles.cartItemDetails}>
           <Text style={styles.cartItemName}>{item.nama}</Text>
           <Text style={styles.cartItemPrice}>{formatRupiah(item.harga)}</Text>
         </View>
       </View>
       <View style={styles.quantityControls}>
-        <Pressable
-          style={styles.quantityButton}
-          onPress={() => updateQuantity(item.id, -1)}
-        >
+        <Pressable style={styles.quantityButton} onPress={() => updateQuantity(item.id, -1)}>
           <Text style={styles.quantityButtonText}>-</Text>
         </Pressable>
         <Text style={styles.quantity}>{item.qty}</Text>
-        <Pressable
-          style={styles.quantityButton}
-          onPress={() => updateQuantity(item.id, 1)}
-        >
+        <Pressable style={styles.quantityButton} onPress={() => updateQuantity(item.id, 1)}>
           <Text style={styles.quantityButtonText}>+</Text>
         </Pressable>
       </View>
-      <Pressable
-        style={styles.removeButton}
-        onPress={() => removeFromCart(item.id)}
-      >
+      <Pressable style={styles.removeButton} onPress={() => removeFromCart(item.id)}>
         <Text style={styles.removeButtonText}>×</Text>
       </Pressable>
     </View>
@@ -162,14 +177,14 @@ export default function TransactionScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Transaksi POS</Text>
         <Text style={styles.headerSubtitle}>Toko Sejahtera</Text>
       </View>
 
       <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* Products Section */}
+        {/* Products */}
         <View style={styles.productsSection}>
           <Text style={styles.sectionTitle}>Pilih Produk</Text>
           <TextInput
@@ -181,17 +196,16 @@ export default function TransactionScreen() {
           <FlatList
             data={filteredProducts}
             renderItem={renderProduct}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item.id.toString()}
             numColumns={2}
             scrollEnabled={false}
             contentContainerStyle={styles.productsList}
           />
         </View>
 
-        {/* Cart Section */}
+        {/* Cart */}
         <View style={styles.cartSection}>
           <Text style={styles.sectionTitle}>Keranjang ({cart.length})</Text>
-          
           {cart.length === 0 ? (
             <View style={styles.emptyCart}>
               <Text style={styles.emptyCartText}>Keranjang kosong</Text>
@@ -201,134 +215,21 @@ export default function TransactionScreen() {
               <FlatList
                 data={cart}
                 renderItem={renderCartItem}
-                keyExtractor={item => item.id}
+                keyExtractor={item => item.id.toString()}
                 scrollEnabled={false}
                 style={styles.cartList}
               />
-              
-              {/* Summary */}
-              <View style={styles.summary}>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Subtotal</Text>
-                  <Text style={styles.summaryValue}>{formatRupiah(subtotal)}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Pajak (10%)</Text>
-                  <Text style={styles.summaryValue}>{formatRupiah(tax)}</Text>
-                </View>
-                <View style={[styles.summaryRow, styles.totalRow]}>
-                  <Text style={styles.totalLabel}>Total</Text>
-                  <Text style={styles.totalValue}>{formatRupiah(total)}</Text>
-                </View>
-              </View>
-
-              {/* Payment Methods */}
-              <View style={styles.paymentMethods}>
-                <Text style={styles.paymentTitle}>Metode Pembayaran</Text>
-                <View style={styles.paymentButtons}>
-                  <Pressable
-                    style={[
-                      styles.paymentButton,
-                      selectedPayment === 'cash' && styles.paymentButtonActive
-                    ]}
-                    onPress={() => setSelectedPayment('cash')}
-                  >
-                    <Text style={[
-                      styles.paymentButtonText,
-                      selectedPayment === 'cash' && styles.paymentButtonTextActive
-                    ]}>💰 Tunai</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.paymentButton,
-                      selectedPayment === 'card' && styles.paymentButtonActive
-                    ]}
-                    onPress={() => setSelectedPayment('card')}
-                  >
-                    <Text style={[
-                      styles.paymentButtonText,
-                      selectedPayment === 'card' && styles.paymentButtonTextActive
-                    ]}>💳 Kartu</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Action Buttons */}
-              <View style={styles.actionButtons}>
-                <Pressable
-                  style={styles.payButton}
-                  onPress={() => setShowPaymentModal(true)}
-                >
-                  <Text style={styles.payButtonText}>Bayar {formatRupiah(total)}</Text>
-                </Pressable>
-                <Pressable style={styles.resetButton} onPress={resetTransaction}>
-                  <Text style={styles.resetButtonText}>Reset Keranjang</Text>
-                </Pressable>
-              </View>
             </>
           )}
         </View>
       </ScrollView>
-
-      {/* Payment Modal */}
-      <Modal
-        visible={showPaymentModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowPaymentModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Konfirmasi Pembayaran</Text>
-            
-            <View style={styles.modalSummary}>
-              <Text style={styles.modalTotalLabel}>Total Pembayaran</Text>
-              <Text style={styles.modalTotalValue}>{formatRupiah(total)}</Text>
-            </View>
-
-            <View style={styles.modalPaymentInfo}>
-              <Text style={styles.modalPaymentLabel}>Metode Pembayaran</Text>
-              <Text style={styles.modalPaymentValue}>
-                {selectedPayment === 'cash' ? '💰 Tunai' : '💳 Kartu'}
-              </Text>
-            </View>
-
-            {selectedPayment === 'cash' && (
-              <View style={styles.cashInput}>
-                <Text style={styles.cashInputLabel}>Uang Diterima</Text>
-                <TextInput
-                  placeholder="Masukkan jumlah uang"
-                  value={customerMoney}
-                  onChangeText={(text) => setCustomerMoney(formatRupiahInput(text))}
-                  keyboardType="numeric"
-                  style={styles.cashInputField}
-                />
-              </View>
-            )}
-
-            <View style={styles.modalButtons}>
-              <Pressable style={styles.confirmButton} onPress={processPayment}>
-                <Text style={styles.confirmButtonText}>Konfirmasi</Text>
-              </Pressable>
-              <Pressable
-                style={styles.cancelButton}
-                onPress={() => setShowPaymentModal(false)}
-              >
-                <Text style={styles.cancelButtonText}>Batal</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Footer */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2024 Toko Sejahtera - POS System v1.0.0</Text>
-      </View>
     </View>
   );
 }
 
+// styles tetap pakai punyamu
+
+// Styles tetap bisa pakai dari kode kamu sebelumnya
 const styles = StyleSheet.create({
   container: {
     flex: 1,

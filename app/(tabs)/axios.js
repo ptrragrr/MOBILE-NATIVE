@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Buat instance axios
 const api = axios.create({
-  baseURL: 'https://ef4d352813da.ngrok-free.app/api/', // Ganti dengan base URL kamu
+  baseURL: ' https://417805b09dd7.ngrok-free.app/api/', // Ganti dengan base URL kamu
   timeout: 10000,
 });
 

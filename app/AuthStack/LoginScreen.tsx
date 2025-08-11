@@ -39,7 +39,7 @@ export default function LoginScreen() {
 
     try {
       const response = await axios.post(
-        'https://ef4d352813da.ngrok-free.app/api/auth/login',
+        'https://417805b09dd7.ngrok-free.app/api/auth/login',
         { email: username, password }
       );
 
