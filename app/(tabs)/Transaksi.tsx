@@ -1,7 +1,7 @@
-// TransactionScreen.js
+// TransaksiStyled.js
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
+  Animated,
   Dimensions,
   FlatList,
   Image,
@@ -16,1129 +16,1059 @@ import {
 } from 'react-native';
 import api from '../axios';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-export default function TransactionScreen({ route }) {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState('cash');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [customerMoney, setCustomerMoney] = useState('');
-  const [categories, setCategories] = useState(['Semua', 'Makanan', 'Minuman', 'Snack']);
+const TransaksiStyled = () => {
+  const [barangList, setBarangList] = useState([]);
+  const [categories, setCategories] = useState(['Semua']);
   const [selectedCategory, setSelectedCategory] = useState('Semua');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [cart, setCart] = useState([]);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [showCartModal, setShowCartModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentData, setPaymentData] = useState({
+    customerName: '',
+    customerPhone: '',
+    paymentMethod: 'cash',
+    cashReceived: 0
+  });
 
-//   export default axios.create({
-//   baseURL: 'https://417805b09dd7.ngrok-free.app/tambah/kategori', // pakai URL ngrok + /api
-//   headers: {
-//     'Content-Type': 'application/json',
-//   },
-// });
+ const fetchBarang = async () => {
+  try {
+    const res = await api.get('/tambah/barang');
+    let dataBarang = Array.isArray(res.data)
+      ? res.data
+      : Array.isArray(res.data.data)
+      ? res.data.data
+      : [];
 
-  const fetchBarang = async () => {
+    // Parse harga jadi integer dan pastikan tidak NaN
+    dataBarang = dataBarang.map(item => ({
+      ...item,
+      harga: parseInt(item.harga || item.harga_barang || 0, 10)
+    }));
+
+    console.log('Data barang dari API (parsed):', dataBarang);
+
+    setBarangList(dataBarang);
+
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
+  } catch (err) {
+    console.error('Error fetching barang:', err.response?.data || err.message);
+    setBarangList([]);
+  }
+};
+
+  const fetchKategori = async () => {
     try {
-      const res = await api.get('/tambah/barang');
+      const res = await api.get('/tambah/kategori');
       const rawData = Array.isArray(res.data.data) ? res.data.data : [];
-
-      const mappedData = rawData.map(item => ({
-        id: item.id,
-        nama: item.nama_barang,
-        harga: parseInt(item.harga_barang),
-        stok: item.stok_barang,
-        foto: item.foto_barang
-          ? item.foto_barang.startsWith('http')
-            ? item.foto_barang
-            : `https://your-domain.com/storage/${item.foto_barang}`
-          : null,
-        kategori: item.kategori || 'Lainnya'
-      }));
-
-      setProducts(mappedData);
+      const cleanKategori = rawData.map(cat => cat?.nama?.trim()).filter(Boolean);
+      const uniqueCategories = [...new Set(cleanKategori)];
+      setCategories(['Semua', ...uniqueCategories]);
     } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'Gagal memuat data barang');
+      console.error('Error fetching kategori:', err);
+      setCategories(['Semua']);
+    }
+  };
+
+  const filteredBarang = barangList.filter(item => {
+    const matchCategory =
+      selectedCategory === 'Semua' ||
+      item.kategori?.toLowerCase() === selectedCategory.toLowerCase();
+    const matchSearch = item.nama_barang
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    return matchCategory && matchSearch;
+  });
+
+const addToCart = (item) => {
+  // Ambil harga asli dari barangList yang sudah diparse
+  const barangAsli = barangList.find(b => b.id === item.id);
+  const hargaAsli = barangAsli ? barangAsli.harga : 0;
+
+  const existingItem = cart.find(cartItem => cartItem.id === item.id);
+  
+  if (existingItem) {
+    setCart(cart.map(cartItem => 
+      cartItem.id === item.id 
+        ? { ...cartItem, quantity: cartItem.quantity + 1 }
+        : cartItem
+    ));
+  } else {
+    setCart([...cart, { ...item, quantity: 1, price: hargaAsli }]);
+  }
+
+  setTotalAmount(totalAmount + hargaAsli);
+};
+
+const removeFromCart = (itemId) => {
+  const item = cart.find(cartItem => cartItem.id === itemId);
+  if (item) {
+    if (item.quantity > 1) {
+      setCart(cart.map(cartItem => 
+        cartItem.id === itemId 
+          ? { ...cartItem, quantity: cartItem.quantity - 1 }
+          : cartItem
+      ));
+    } else {
+      setCart(cart.filter(cartItem => cartItem.id !== itemId));
+    }
+    setTotalAmount(totalAmount - item.price);
+  }
+};
+
+
+  const getItemQuantity = (itemId) => {
+    const item = cart.find(cartItem => cartItem.id === itemId);
+    return item ? item.quantity : 0;
+  };
+
+  const processTransaction = async () => {
+    if (cart.length === 0) return;
+    
+    setShowPaymentModal(true);
+  };
+
+  const finalizePayment = async () => {
+    try {
+      const transactionData = {
+        items: cart,
+        total: totalAmount,
+        customer: {
+          name: paymentData.customerName,
+          phone: paymentData.customerPhone
+        },
+        payment: {
+          method: paymentData.paymentMethod,
+          cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
+          change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('Processing transaction:', transactionData);
+      
+      // Reset semuanya
+      setCart([]);
+      setTotalAmount(0);
+      setShowPaymentModal(false);
+      setPaymentData({
+        customerName: '',
+        customerPhone: '',
+        paymentMethod: 'cash',
+        cashReceived: 0
+      });
+      
+      alert(`Transaksi berhasil!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}\n${paymentData.paymentMethod === 'cash' ? `Uang Diterima: Rp ${paymentData.cashReceived.toLocaleString('id-ID')}\nKembalian: Rp ${(paymentData.cashReceived - totalAmount).toLocaleString('id-ID')}` : 'Pembayaran Digital'}`);
+    } catch (err) {
+      console.error('Transaction failed:', err);
+      alert('Transaksi gagal!');
     }
   };
 
   useEffect(() => {
     fetchBarang();
+    fetchKategori();
   }, []);
-  
-  useEffect(() => {
-    if (route?.params?.refresh) {
-      fetchBarang();
-    }
-  }, [route?.params?.refresh]);
 
-  const formatRupiah = (amount) =>
-    new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-
-  const filteredProducts = products.filter(item => {
-    const matchesSearch = item.nama?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'Semua' || item.kategori === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const addToCart = (barang) => {
-    if (barang.stok <= 0) {
-      Alert.alert('Stok Habis', 'Produk ini sedang tidak tersedia');
-      return;
-    }
+  const renderProductCard = ({ item }) => {
+    const quantity = getItemQuantity(item.id);
     
-    const existingItem = cart.find(item => item.id === barang.id);
-    if (existingItem) {
-      if (existingItem.qty >= barang.stok) {
-        Alert.alert('Stok Terbatas', `Stok tersedia: ${barang.stok}`);
-        return;
-      }
-      setCart(cart.map(item =>
-        item.id === barang.id
-          ? { ...item, qty: item.qty + 1 }
-          : item
-      ));
-    } else {
-      setCart([...cart, { ...barang, qty: 1 }]);
-    }
-  };
-
-  const updateQuantity = (id, change) => {
-    const product = products.find(p => p.id === id);
-    setCart(cart
-      .map(item => {
-        if (item.id === id) {
-          const newQty = Math.max(0, item.qty + change);
-          if (newQty > product.stok) {
-            Alert.alert('Stok Terbatas', `Stok tersedia: ${product.stok}`);
-            return item;
+    return (
+      <Animated.View 
+        style={[
+          styles.productCard,
+          {
+            opacity: fadeAnim,
+            transform: [{
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [50, 0],
+              }),
+            }],
           }
-          return newQty === 0 ? null : { ...item, qty: newQty };
-        }
-        return item;
-      })
-      .filter(Boolean)
+        ]}
+      >
+        <View style={styles.productImageContainer}>
+          <Image
+            source={{
+              uri: item.gambar_url?.startsWith('http')
+                ? item.gambar_url
+                : `https://domain-api.com/uploads/${item.gambar_url}`,
+            }}
+            style={styles.productImage}
+            onError={() => console.log('Image failed to load')}
+          />
+          {quantity > 0 && (
+            <View style={styles.quantityBadge}>
+              <Text style={styles.quantityBadgeText}>{quantity}</Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.productInfo}>
+          <Text style={styles.productName} numberOfLines={2}>
+            {item.nama_barang}
+          </Text>
+          <Text style={styles.productCategory}>{item.kategori}</Text>
+          <Text style={styles.productPrice}>
+            Rp {(item.harga || 0).toLocaleString('id-ID')}
+          </Text>
+        </View>
+        
+        <View style={styles.productActions}>
+          {quantity > 0 ? (
+            <View style={styles.quantityControls}>
+              <TouchableOpacity
+                style={styles.quantityButton}
+                onPress={() => removeFromCart(item.id)}
+              >
+                <Text style={styles.quantityButtonText}>−</Text>
+              </TouchableOpacity>
+              <Text style={styles.quantityText}>{quantity}</Text>
+              <TouchableOpacity
+                style={styles.quantityButton}
+                onPress={() => addToCart(item)}
+              >
+                <Text style={styles.quantityButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => addToCart(item)}
+            >
+              <Text style={styles.addButtonText}>Tambah</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </Animated.View>
     );
   };
 
-  const removeFromCart = (id) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
-
-  const calculateTotal = () => {
-    const subtotal = cart.reduce((sum, item) => sum + (item.harga * item.qty), 0);
-    const tax = subtotal * 0.11; // PPN 11%
-    const discount = 0;
-    return { subtotal, tax, discount, total: subtotal + tax - discount };
-  };
-
-  const { subtotal, tax, discount, total } = calculateTotal();
-
-  const processPayment = async () => {
-    if (selectedPayment === 'cash') {
-      const money = parseInt(customerMoney.replace(/\D/g, '')) || 0;
-      if (money < total) {
-        Alert.alert('Uang Kurang', `Kekurangan: ${formatRupiah(total - money)}`);
-        return;
-      }
-      const change = money - total;
-      
-      Alert.alert(
-        '✅ Pembayaran Berhasil',
-        `Kembalian: ${formatRupiah(change)}\nTerima kasih!`,
-        [{ text: 'OK', onPress: resetTransaction }]
-      );
-    } else {
-      Alert.alert(
-        '✅ Pembayaran Berhasil',
-        'Transaksi berhasil diproses',
-        [{ text: 'OK', onPress: resetTransaction }]
-      );
-    }
-  };
-
-  const resetTransaction = () => {
-    setCart([]);
-    setCustomerMoney('');
-    setShowPaymentModal(false);
-  };
-
-  const renderProduct = ({ item }) => (
-    <TouchableOpacity 
-      style={[styles.productCard, item.stok <= 0 && styles.productCardDisabled]} 
-      onPress={() => addToCart(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.productImageContainer}>
-        {item.foto ? (
-          <Image
-            source={{ uri: item.foto }}
-            style={styles.productImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.productPlaceholder}>
-            <View style={styles.productPlaceholderIcon}>
-              <Text style={styles.productPlaceholderText}>
-                {item.nama?.charAt(0).toUpperCase() || '?'}
-              </Text>
-            </View>
-          </View>
-        )}
-        
-        <View style={styles.stockBadge}>
-          <Text style={styles.stockBadgeText}>{item.stok}</Text>
-        </View>
-        
-        {item.stok > 0 && (
-          <View style={styles.addButton}>
-            <Text style={styles.addButtonText}>+</Text>
-          </View>
-        )}
-      </View>
-      
-      <View style={styles.productInfo}>
-        <Text style={styles.productName} numberOfLines={2}>{item.nama}</Text>
-        <Text style={styles.productPrice}>{formatRupiah(item.harga)}</Text>
-        <View style={styles.stockInfo}>
-          <View style={[
-            styles.stockDot, 
-            { backgroundColor: item.stok > 10 ? '#22c55e' : item.stok > 0 ? '#f59e0b' : '#ef4444' }
-          ]} />
-          <Text style={styles.stockText}>
-            {item.stok} tersedia
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  const PaymentModal = () => (
-    <Modal
-      visible={showPaymentModal}
-      animationType="slide"
-      transparent
-      onRequestClose={() => setShowPaymentModal(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Pembayaran</Text>
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={() => setShowPaymentModal(false)}
-            >
-              <Text style={styles.closeButtonText}>×</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.totalSection}>
-            <Text style={styles.totalLabel}>Total Bayar</Text>
-            <Text style={styles.totalAmount}>{formatRupiah(total)}</Text>
-          </View>
-
-          <View style={styles.paymentMethods}>
-            {[
-              { key: 'cash', label: '💵 Tunai', icon: '💵' },
-              { key: 'card', label: '💳 Kartu', icon: '💳' },
-              { key: 'qris', label: '📱 QRIS', icon: '📱' }
-            ].map(method => (
-              <TouchableOpacity
-                key={method.key}
-                style={[
-                  styles.paymentMethod,
-                  selectedPayment === method.key && styles.paymentMethodActive,
-                ]}
-                onPress={() => setSelectedPayment(method.key)}
-              >
-                <Text style={styles.paymentMethodIcon}>{method.icon}</Text>
-                <Text style={[
-                  styles.paymentMethodText,
-                  selectedPayment === method.key && styles.paymentMethodTextActive,
-                ]}>
-                  {method.label.replace(/[^\w\s]/gi, '')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {selectedPayment === 'cash' && (
-            <View style={styles.cashSection}>
-              <Text style={styles.inputLabel}>Jumlah Uang Diterima</Text>
-              <View style={styles.cashInputContainer}>
-                <Text style={styles.currencySymbol}>Rp</Text>
-                <TextInput
-                  style={styles.cashInput}
-                  placeholder="0"
-                  value={customerMoney ? parseInt(customerMoney).toLocaleString('id-ID') : ''}
-                  onChangeText={text => {
-                    const clean = text.replace(/[^0-9]/g, '');
-                    setCustomerMoney(clean);
-                  }}
-                  keyboardType="numeric"
-                />
-              </View>
-              
-              {customerMoney && (
-                <View style={styles.changeSection}>
-                  <Text style={styles.changeLabel}>Kembalian:</Text>
-                  <Text style={[
-                    styles.changeAmount,
-                    { color: parseInt(customerMoney) >= total ? '#10b981' : '#ef4444' }
-                  ]}>
-                    {formatRupiah(Math.max(0, parseInt(customerMoney || '0') - total))}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[
-              styles.payButton,
-              (selectedPayment === 'cash' && (!customerMoney || parseInt(customerMoney) < total)) 
-                && styles.payButtonDisabled
-            ]}
-            onPress={processPayment}
-            disabled={selectedPayment === 'cash' && (!customerMoney || parseInt(customerMoney) < total)}
-          >
-            <Text style={styles.payButtonText}>
-              💰 Bayar {formatRupiah(total)}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#ffffffff" />
+      <StatusBar barStyle="light-content" backgroundColor="#059669" />
       
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <View style={styles.storeIcon}>
-            <Text style={styles.storeIconText}>🏪</Text>
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.headerTitle}>Toko Sejahtera</Text>
-            <Text style={styles.headerSubtitle}>Point of Sale System</Text>
-          </View>
-        </View>
-        
-        <View style={styles.cartBadge}>
-          <Text style={styles.cartBadgeText}>{cart.length}</Text>
+        <Text style={styles.headerTitle}>Transaksi</Text>
+        <Text style={styles.headerSubtitle}>
+          {filteredBarang.length} produk • {cart.length} di keranjang
+        </Text>
+      </View>
+
+      {/* Search Section */}
+      <View style={styles.searchSection}>
+        <View style={styles.searchContainer}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Cari produk..."
+            placeholderTextColor="#a0a0a0"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery ? (
+            <TouchableOpacity 
+              style={styles.clearButton}
+              onPress={() => setSearchQuery('')}
+            >
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Products Section */}
-        <View style={styles.productsSection}>
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Cari produk..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholderTextColor="#9ca3af"
-            />
-          </View>
-
-          {/* Category Filter */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.categoryContainer}
-          >
-            {categories.map(category => (
-              <TouchableOpacity
-                key={category}
+      {/* Category Filter */}
+      <View style={styles.categorySection}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryScroll}
+          contentContainerStyle={styles.categoryContent}
+        >
+          {categories.map((cat, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.categoryChip,
+                selectedCategory === cat && styles.categoryChipActive
+              ]}
+              onPress={() => setSelectedCategory(cat)}
+            >
+              <Text
                 style={[
-                  styles.categoryButton,
-                  selectedCategory === category && styles.categoryButtonActive
+                  styles.categoryChipText,
+                  selectedCategory === cat && styles.categoryChipTextActive
                 ]}
-                onPress={() => setSelectedCategory(category)}
               >
-                <Text style={[
-                  styles.categoryButtonText,
-                  selectedCategory === category && styles.categoryButtonTextActive
-                ]}>
-                  {category}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
-          {/* Products Grid */}
+      {/* Products Grid */}
+      <View style={styles.productsSection}>
+        {filteredBarang.length > 0 ? (
           <FlatList
-            data={filteredProducts}
-            renderItem={renderProduct}
+            data={filteredBarang}
             keyExtractor={item => item.id.toString()}
+            renderItem={renderProductCard}
             numColumns={2}
-            scrollEnabled={false}
-            contentContainerStyle={styles.productsList}
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.productsGrid}
+            columnWrapperStyle={styles.productRow}
+            ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
           />
-        </View>
-
-        {/* Cart Section */}
-        <View style={styles.cartSection}>
-          <View style={styles.cartHeader}>
-            <View style={styles.cartTitleContainer}>
-              <Text style={styles.cartIcon}>🛒</Text>
-              <Text style={styles.cartTitle}>Keranjang</Text>
-            </View>
-            {cart.length > 0 && (
-              <TouchableOpacity 
-                style={styles.clearButton}
-                onPress={() => setCart([])}
-              >
-                <Text style={styles.clearButtonText}>Kosongkan</Text>
-              </TouchableOpacity>
-            )}
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>🛒</Text>
+            <Text style={styles.emptyTitle}>Tidak ada produk</Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery || selectedCategory !== 'Semua' 
+                ? 'Coba ubah filter atau pencarian'
+                : 'Belum ada produk tersedia'}
+            </Text>
           </View>
+        )}
+      </View>
 
-          {cart.length === 0 ? (
-            <View style={styles.emptyCart}>
-              <Text style={styles.emptyCartIcon}>🛒</Text>
-              <Text style={styles.emptyCartText}>Keranjang Kosong</Text>
-              <Text style={styles.emptyCartSubtext}>Pilih produk untuk memulai transaksi</Text>
+      {/* Cart Summary & Checkout */}
+      {cart.length > 0 && (
+        <View style={styles.cartSummary}>
+          <TouchableOpacity 
+            style={styles.cartDetailsButton}
+            onPress={() => setShowCartModal(true)}
+          >
+            <Text style={styles.cartDetailsIcon}>🛒</Text>
+            <View style={styles.cartInfo}>
+              <Text style={styles.cartItemCount}>
+                {cart.reduce((sum, item) => sum + item.quantity, 0)} item
+              </Text>
+              <Text style={styles.cartTotal}>
+                Rp {totalAmount.toLocaleString('id-ID')}
+              </Text>
             </View>
-          ) : (
-            <>
-              <View style={styles.cartList}>
-                {cart.map((item) => (
-                  <View key={item.id} style={styles.cartItem}>
-                    <View style={styles.cartItemImage}>
-                      {item.foto ? (
-                        <Image source={{ uri: item.foto }} style={styles.cartImage} />
-                      ) : (
-                        <View style={styles.cartImagePlaceholder}>
-                          <Text style={styles.cartImageText}>
-                            {item.nama?.charAt(0).toUpperCase() || '?'}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    
-                    <View style={styles.cartItemDetails}>
-                      <Text style={styles.cartItemName}>{item.nama}</Text>
-                      <Text style={styles.cartItemPrice}>{formatRupiah(item.harga)}</Text>
-                      <Text style={styles.cartItemTotal}>{formatRupiah(item.harga * item.qty)}</Text>
-                    </View>
-                    
-                    <View style={styles.cartItemActions}>
-                      <View style={styles.quantityControl}>
-                        <TouchableOpacity 
-                          style={styles.quantityBtn}
-                          onPress={() => updateQuantity(item.id, -1)}
-                        >
-                          <Text style={styles.quantityBtnText}>−</Text>
-                        </TouchableOpacity>
-                        <View style={styles.quantityContainer}>
-                          <Text style={styles.quantityText}>{item.qty}</Text>
-                        </View>
-                        <TouchableOpacity 
-                          style={styles.quantityBtn}
-                          onPress={() => updateQuantity(item.id, 1)}
-                        >
-                          <Text style={styles.quantityBtnText}>+</Text>
-                        </TouchableOpacity>
-                      </View>
-                      
-                      <TouchableOpacity 
-                        style={styles.deleteBtn}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.checkoutButton}
+            onPress={processTransaction}
+          >
+            <Text style={styles.checkoutButtonText}>Checkout</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Cart Modal */}
+      <Modal
+        visible={showCartModal}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.cartModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Keranjang Belanja</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowCartModal(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={cart}
+              keyExtractor={item => item.id.toString()}
+              style={styles.cartList}
+              renderItem={({ item }) => (
+                <View style={styles.cartItem}>
+                  <Image
+                    source={{
+                      uri: item.gambar_url?.startsWith('http')
+                        ? item.gambar_url
+                        : `https://domain-api.com/uploads/${item.gambar_url}`,
+                    }}
+                    style={styles.cartItemImage}
+                  />
+                  <View style={styles.cartItemInfo}>
+                    <Text style={styles.cartItemName}>{item.nama_barang}</Text>
+                    <Text style={styles.cartItemCategory}>{item.kategori}</Text>
+                    <Text style={styles.cartItemPrice}>
+                      Rp {(item.price || 0).toLocaleString('id-ID')}
+                    </Text>
+                  </View>
+                  <View style={styles.cartItemControls}>
+                    <View style={styles.quantityControls}>
+                      <TouchableOpacity
+                        style={styles.quantityButton}
                         onPress={() => removeFromCart(item.id)}
                       >
-                        <Text style={styles.deleteBtnText}>🗑</Text>
+                        <Text style={styles.quantityButtonText}>−</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.quantityText}>{item.quantity}</Text>
+                      <TouchableOpacity
+                        style={styles.quantityButton}
+                        onPress={() => addToCart(item)}
+                      >
+                        <Text style={styles.quantityButtonText}>+</Text>
                       </TouchableOpacity>
                     </View>
+                    <Text style={styles.cartItemSubtotal}>
+                      Rp {((item.price || 0) * item.quantity).toLocaleString('id-ID')}
+                    </Text>
                   </View>
-                ))}
+                </View>
+              )}
+            />
+            
+            <View style={styles.cartSummaryModal}>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total:</Text>
+                <Text style={styles.totalAmount}>
+                  Rp {totalAmount.toLocaleString('id-ID')}
+                </Text>
               </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
-              {/* Summary */}
-              <View style={styles.summary}>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Subtotal</Text>
-                  <Text style={styles.summaryValue}>{formatRupiah(subtotal)}</Text>
-                </View>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>PPN (11%)</Text>
-                  <Text style={styles.summaryValue}>{formatRupiah(tax)}</Text>
-                </View>
-                <View style={styles.summaryDivider} />
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalRowLabel}>Total</Text>
-                  <Text style={styles.totalRowValue}>{formatRupiah(total)}</Text>
-                </View>
-              </View>
-
-              {/* Checkout Button */}
+      {/* Payment Modal */}
+      <Modal
+        visible={showPaymentModal}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pembayaran</Text>
               <TouchableOpacity
-                style={styles.checkoutButton}
-                onPress={() => setShowPaymentModal(true)}
+                style={styles.closeButton}
+                onPress={() => setShowPaymentModal(false)}
               >
-                <Text style={styles.checkoutButtonText}>
-                  💰 Bayar {formatRupiah(total)}
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.paymentForm}>
+              {/* Customer Info */}
+              {/* <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Info Pelanggan</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="Nama Pelanggan"
+                  value={paymentData.customerName}
+                  onChangeText={(text) => setPaymentData(prev => ({ ...prev, customerName: text }))}
+                />
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="No. Telepon"
+                  value={paymentData.customerPhone}
+                  onChangeText={(text) => setPaymentData(prev => ({ ...prev, customerPhone: text }))}
+                  keyboardType="phone-pad"
+                />
+              </View> */}
+
+              {/* Payment Method */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
+                <View style={styles.paymentMethods}>
+                  {['cash', 'digital'].map((method) => (
+                    <TouchableOpacity
+                      key={method}
+                      style={[
+                        styles.paymentMethodButton,
+                        paymentData.paymentMethod === method && styles.paymentMethodActive
+                      ]}
+                      onPress={() => setPaymentData(prev => ({ ...prev, paymentMethod: method }))}
+                    >
+                      <Text style={[
+                        styles.paymentMethodText,
+                        paymentData.paymentMethod === method && styles.paymentMethodTextActive
+                      ]}>
+                        {method === 'cash' ? '💵 Cash' : '💳 Digital'}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Cash Payment */}
+              {paymentData.paymentMethod === 'cash' && (
+                <View style={styles.formSection}>
+                  <Text style={styles.sectionTitle}>Uang Tunai</Text>
+                  <TextInput
+                    style={styles.formInput}
+                    placeholder="Jumlah uang yang diterima"
+                    value={paymentData.cashReceived.toString()}
+                    onChangeText={(text) => setPaymentData(prev => ({ 
+                      ...prev, 
+                      cashReceived: parseInt(text.replace(/[^0-9]/g, '')) || 0 
+                    }))}
+                    keyboardType="numeric"
+                  />
+                  <View style={styles.changeInfo}>
+                    <Text style={styles.changeLabel}>
+                      Kembalian: 
+                      <Text style={styles.changeAmount}>
+                        {' '}Rp {Math.max(0, paymentData.cashReceived - totalAmount).toLocaleString('id-ID')}
+                      </Text>
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Order Summary */}
+              <View style={styles.formSection}>
+                <Text style={styles.sectionTitle}>Ringkasan Pesanan</Text>
+                <View style={styles.orderSummary}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>
+                      Total Item: {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Subtotal:</Text>
+                    <Text style={styles.summaryValue}>
+                      Rp {totalAmount.toLocaleString('id-ID')}
+                    </Text>
+                  </View>
+                  <View style={[styles.summaryRow, styles.totalRow]}>
+                    <Text style={styles.totalLabel}>Total Pembayaran:</Text>
+                    <Text style={styles.totalAmount}>
+                      Rp {totalAmount.toLocaleString('id-ID')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Payment Actions */}
+            <View style={styles.paymentActions}>
+              <TouchableOpacity
+                style={[
+                  styles.processPaymentButton,
+                  (!paymentData.customerName || 
+                   (paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount)) && 
+                  styles.disabledButton
+                ]}
+                onPress={finalizePayment}
+                disabled={!paymentData.customerName || 
+                         (paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount)}
+              >
+                <Text style={styles.processPaymentText}>
+                  Proses Pembayaran
                 </Text>
               </TouchableOpacity>
-            </>
-          )}
+            </View>
+          </View>
         </View>
-      </ScrollView>
-
-      <PaymentModal />
+      </Modal>
     </View>
   );
-}
+};
+
+export default TransaksiStyled;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffffff',
+    backgroundColor: '#f8fafc',
   },
-
-  // Header
   header: {
-    backgroundColor: '#ffffffff',
-    paddingTop: 50,
-    paddingBottom: 20,
+    backgroundColor: '#059669',
+    paddingTop: 60,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  storeIcon: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 12,
-    padding: 8,
-    marginRight: 12,
-  },
-  storeIconText: {
-    fontSize: 24,
-  },
-  headerInfo: {
-    justifyContent: 'center',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#000000ff',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(0, 0, 0, 0.8)',
-    marginTop: 2,
+    color: '#a7f3d0',
+    opacity: 0.9,
   },
-  cartBadge: {
-    backgroundColor: '#dc2626',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minWidth: 40,
+  searchSection: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 12,
+  },
+  searchContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  cartBadgeText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Content
-  content: {
-    flex: 1,
-    padding: 16,
-  },
-
-  // Products Section
-  productsSection: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
   },
-
-  // Search
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
   searchIcon: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
     fontSize: 16,
-    color: '#1f2937',
+    color: '#1e293b',
+    paddingVertical: 12,
   },
-
-  // Categories
-  categoryContainer: {
-    marginBottom: 20,
+  clearButton: {
+    padding: 4,
   },
-  categoryButton: {
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 25,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  categoryButtonActive: {
-    backgroundColor: '#4f46e5',
-    borderColor: '#4f46e5',
-  },
-  categoryButtonText: {
+  clearButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    color: '#94a3b8',
+  },
+  categorySection: {
+    paddingBottom: 16,
+  },
+  categoryScroll: {
+    paddingLeft: 20,
+  },
+  categoryContent: {
+    paddingRight: 20,
+  },
+  categoryChip: {
+    backgroundColor: '#e2e8f0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  categoryChipActive: {
+    backgroundColor: '#059669',
+  },
+  categoryChipText: {
+    fontSize: 14,
+    fontWeight: '500',
     color: '#64748b',
   },
-  categoryButtonTextActive: {
+  categoryChipTextActive: {
     color: '#ffffff',
+    fontWeight: '600',
   },
-
-  // Products List
-  productsList: {
-    paddingBottom: 10,
-  },
-
-  // Product Card
-  productCard: {
+  productsSection: {
     flex: 1,
+    paddingHorizontal: 20,
+  },
+  productsGrid: {
+    paddingBottom: 100,
+  },
+  productRow: {
+    justifyContent: 'space-between',
+  },
+  productCard: {
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    margin: 6,
+    padding: 12,
+    marginBottom: 16,
+    width: (width - 50) / 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  productCardDisabled: {
-    opacity: 0.6,
   },
   productImageContainer: {
     position: 'relative',
-    height: 140,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    overflow: 'hidden',
+    marginBottom: 12,
   },
   productImage: {
     width: '100%',
-    height: '100%',
+    height: 120,
+    borderRadius: 12,
+    backgroundColor: '#f1f5f9',
   },
-  productPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#e2e8f0',
-  },
-  productPlaceholderIcon: {
-    backgroundColor: '#9ca3af',
-    borderRadius: 25,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  productPlaceholderText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  stockBadge: {
+  quantityBadge: {
     position: 'absolute',
     top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  stockBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  addButton: {
-    position: 'absolute',
-    bottom: 8,
     right: 8,
-    backgroundColor: '#22c55e',
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
+    backgroundColor: '#059669',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 24,
     alignItems: 'center',
-    shadowColor: '#22c55e',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
-  addButtonText: {
+  quantityBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#ffffff',
-    fontSize: 20,
-    fontWeight: 'bold',
   },
   productInfo: {
-    padding: 16,
+    marginBottom: 12,
   },
   productName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 8,
-    height: 40,
+    color: '#1e293b',
+    marginBottom: 4,
+    lineHeight: 18,
+  },
+  productCategory: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 6,
   },
   productPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4f46e5',
-    marginBottom: 8,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
   },
-  stockInfo: {
-    flexDirection: 'row',
+  productActions: {
     alignItems: 'center',
   },
-  stockDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-  stockText: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-
-  // Cart Section
-  cartSection: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  cartHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  cartTitleContainer: {
+  quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  cartIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
-  cartTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  clearButton: {
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: '#f1f5f9',
     borderRadius: 20,
+    paddingHorizontal: 4,
   },
-  clearButtonText: {
+  quantityButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#059669',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quantityButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-
-  // Empty Cart
-  emptyCart: {
-    paddingVertical: 60,
-    alignItems: 'center',
-  },
-  emptyCartIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-    opacity: 0.3,
-  },
-  emptyCartText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#6b7280',
-    marginBottom: 8,
-  },
-  emptyCartSubtext: {
-    fontSize: 14,
-    color: '#9ca3af',
-    textAlign: 'center',
-  },
-
-  // Cart List
-  cartList: {
-    marginBottom: 20,
-  },
-
-  // Cart Item
-  cartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  cartItemImage: {
-    marginRight: 16,
-  },
-  cartImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-  },
-  cartImagePlaceholder: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cartImageText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6b7280',
-  },
-  cartItemDetails: {
-    flex: 1,
-  },
-  cartItemName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  cartItemPrice: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 4,
-  },
-  cartItemTotal: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4f46e5',
-  },
-  cartItemActions: {
-    alignItems: 'center',
-  },
-  quantityControl: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  quantityBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    margin: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  quantityBtnText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4f46e5',
-  },
-  quantityContainer: {
-    paddingHorizontal: 16,
   },
   quantityText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontWeight: '600',
+    color: '#1e293b',
+    paddingHorizontal: 16,
   },
-  deleteBtn: {
-    padding: 8,
-  },
-  deleteBtnText: {
-    fontSize: 16,
-  },
-
-  // Summary
-  summary: {
-    backgroundColor: '#f8fafc',
+  addButton: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 24,
+    paddingVertical: 8,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  itemSeparator: {
+    height: 8,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 40,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#64748b',
     marginBottom: 8,
   },
-  summaryLabel: {
+  emptySubtitle: {
     fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '500',
+    color: '#94a3b8',
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  summaryValue: {
-    fontSize: 14,
-    color: '#1f2937',
-    fontWeight: '600',
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: '#e2e8f0',
-    marginVertical: 12,
-  },
-  totalRow: {
+  cartSummary: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  cartDetailsButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: 16,
   },
-  totalRowLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1f2937',
+  cartDetailsIcon: {
+    fontSize: 24,
+    marginRight: 12,
   },
-  totalRowValue: {
+  cartInfo: {
+    flex: 1,
+  },
+  cartItemCount: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 2,
+  },
+  cartTotal: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4f46e5',
+    fontWeight: '700',
+    color: '#1e293b',
   },
-
-  // Checkout Button
   checkoutButton: {
-    backgroundColor: '#22c55e',
-    paddingVertical: 16,
+    backgroundColor: '#059669',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
     borderRadius: 16,
-    alignItems: 'center',
-    shadowColor: '#22c55e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
   },
   checkoutButtonText: {
-    color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#ffffff',
   },
-
-  // Modal
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  modalContent: {
-    width: '100%',
-    maxWidth: 400,
+  cartModalContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    paddingBottom: 20,
+  },
+  paymentModalContainer: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    paddingBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   modalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1e293b',
   },
   closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 8,
   },
   closeButtonText: {
-    fontSize: 24,
-    color: '#6b7280',
-    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#94a3b8',
   },
-
-  // Total Section
-  totalSection: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
+  // Cart Modal Styles
+  cartList: {
+    maxHeight: 400,
+    paddingHorizontal: 20,
   },
-  totalLabel: {
-    fontSize: 16,
-    color: '#6b7280',
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  totalAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-
-  // Payment Methods
-  paymentMethods: {
+  cartItem: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
-  },
-  paymentMethod: {
-    flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
-  paymentMethodActive: {
-    borderColor: '#4f46e5',
-    backgroundColor: '#eff6ff',
+  cartItemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+    marginRight: 12,
   },
-  paymentMethodIcon: {
-    fontSize: 24,
-    marginBottom: 8,
+  cartItemInfo: {
+    flex: 1,
+    marginRight: 12,
   },
-  paymentMethodText: {
+  cartItemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6b7280',
+    color: '#1e293b',
+    marginBottom: 4,
   },
-  paymentMethodTextActive: {
-    color: '#4f46e5',
+  cartItemCategory: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 4,
   },
-
-  // Cash Section
-  cashSection: {
-    marginBottom: 24,
-  },
-  inputLabel: {
-    fontSize: 16,
+  cartItemPrice: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 12,
+    color: '#059669',
   },
-  cashInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    paddingHorizontal: 16,
+  cartItemControls: {
+    alignItems: 'flex-end',
   },
-  currencySymbol: {
-    fontSize: 18,
-    color: '#6b7280',
-    fontWeight: 'bold',
-    marginRight: 8,
+  cartItemSubtotal: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginTop: 8,
   },
-  cashInput: {
-    flex: 1,
-    paddingVertical: 16,
-    fontSize: 20,
-    color: '#1f2937',
-    fontWeight: 'bold',
+  cartSummaryModal: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
   },
-  changeSection: {
+  totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 16,
-    padding: 16,
-    backgroundColor: '#f0fdf4',
-    borderRadius: 12,
+    paddingVertical: 8,
+    borderTopWidth: 2,
+    borderTopColor: '#059669',
+    marginTop: 8,
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  totalAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  // Payment Modal Styles
+  paymentForm: {
+    maxHeight: 500,
+    paddingHorizontal: 20,
+  },
+  formSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  formInput: {
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1e293b',
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
+  },
+  paymentMethods: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  paymentMethodButton: {
+    flex: 1,
+    backgroundColor: '#f1f5f9',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  paymentMethodActive: {
+    backgroundColor: '#ecfdf5',
+    borderColor: '#059669',
+  },
+  paymentMethodText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  paymentMethodTextActive: {
+    color: '#059669',
+  },
+  changeInfo: {
+    backgroundColor: '#f0f9ff',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
   },
   changeLabel: {
-    fontSize: 16,
-    color: '#065f46',
-    fontWeight: '600',
+    fontSize: 14,
+    color: '#0369a1',
   },
   changeAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#0c4a6e',
   },
-
-  // Pay Button
-  payButton: {
-    backgroundColor: '#22c55e',
+  orderSummary: {
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 12,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  paymentActions: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  processPaymentButton: {
+    backgroundColor: '#059669',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#22c55e',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  payButtonDisabled: {
-    backgroundColor: '#d1d5db',
-    shadowOpacity: 0,
-    elevation: 0,
+  disabledButton: {
+    backgroundColor: '#94a3b8',
   },
-  payButtonText: {
+  processPaymentText: {
+    fontSize: 16,
+    fontWeight: '600',
     color: '#ffffff',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
 });

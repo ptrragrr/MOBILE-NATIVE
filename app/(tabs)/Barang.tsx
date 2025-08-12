@@ -50,7 +50,7 @@ const InventoryManagement = () => {
     fetchBarang();
     fetchKategori();
   }, []);
-
+  
   // Image Picker
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();

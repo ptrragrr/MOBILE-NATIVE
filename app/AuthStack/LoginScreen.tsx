@@ -39,7 +39,7 @@ export default function LoginScreen() {
 
     try {
       const response = await axios.post(
-        'https://088ae9a8cc46.ngrok-free.app/api/auth/login',
+        'https://0844d8854052.ngrok-free.app/api/auth/login',
         { email: username, password }
       );
 
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -50,
     right: -50,
-    width: 120,
+    width: 180,
     height: 120,
     borderRadius: 60,
     backgroundColor: 'rgba(0, 0, 0, 0.02)',

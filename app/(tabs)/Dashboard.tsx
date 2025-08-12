@@ -53,7 +53,7 @@ export default function Dashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/barang'); // pastikan route /api/dashboard ada
+      const res = await api.get('/dashboard'); // pastikan route /api/dashboard ada
 
       // fallback kalau struktur berbeda
       const data = res.data ?? {};
