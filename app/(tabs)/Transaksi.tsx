@@ -81,7 +81,7 @@ const TransaksiStyled = () => {
   const filteredBarang = barangList.filter(item => {
     const matchCategory =
       selectedCategory === 'Semua' ||
-      item.kategori?.toLowerCase() === selectedCategory.toLowerCase();
+      item.kategori_nama?.toLowerCase() === selectedCategory.toLowerCase();
     const matchSearch = item.nama_barang
       ?.toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -199,9 +199,9 @@ const removeFromCart = (itemId) => {
         <View style={styles.productImageContainer}>
           <Image
             source={{
-              uri: item.gambar_url?.startsWith('http')
-                ? item.gambar_url
-                : `https://domain-api.com/uploads/${item.gambar_url}`,
+              uri: item.foto_barang?.startsWith('http')
+                ? item.foto_barang
+                : `https://0844d8854052.ngrok-free.app/storage/${item.foto_barang}`,
             }}
             style={styles.productImage}
             onError={() => console.log('Image failed to load')}
@@ -255,7 +255,7 @@ const removeFromCart = (itemId) => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#059669" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       {/* Header */}
       <View style={styles.header}>
@@ -272,7 +272,7 @@ const removeFromCart = (itemId) => {
           <TextInput
             style={styles.searchInput}
             placeholder="Cari produk..."
-            placeholderTextColor="#a0a0a0"
+            placeholderTextColor="#999999"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -302,7 +302,9 @@ const removeFromCart = (itemId) => {
                 styles.categoryChip,
                 selectedCategory === cat && styles.categoryChipActive
               ]}
-              onPress={() => setSelectedCategory(cat)}
+              onPress={() => {
+                console.log(cat); 
+                setSelectedCategory(cat)}}
             >
               <Text
                 style={[
@@ -510,15 +512,25 @@ const removeFromCart = (itemId) => {
                 <View style={styles.formSection}>
                   <Text style={styles.sectionTitle}>Uang Tunai</Text>
                   <TextInput
-                    style={styles.formInput}
-                    placeholder="Jumlah uang yang diterima"
-                    value={paymentData.cashReceived.toString()}
-                    onChangeText={(text) => setPaymentData(prev => ({ 
-                      ...prev, 
-                      cashReceived: parseInt(text.replace(/[^0-9]/g, '')) || 0 
-                    }))}
-                    keyboardType="numeric"
-                  />
+  style={styles.formInput}
+  placeholder="Jumlah uang yang diterima"
+  value={
+    paymentData.cashReceived
+      ? `Rp ${paymentData.cashReceived.toLocaleString('id-ID')}`
+      : ''
+  }
+  onChangeText={(text) => {
+    // Ambil hanya angka dari input
+    const numericValue = parseInt(text.replace(/[^0-9]/g, ''), 10) || 0;
+
+    // Simpan nilai angka ke state (untuk perhitungan)
+    setPaymentData(prev => ({
+      ...prev,
+      cashReceived: numericValue
+    }));
+  }}
+  keyboardType="numeric"
+/>
                   <View style={styles.changeInfo}>
                     <Text style={styles.changeLabel}>
                       Kembalian: 
@@ -585,10 +597,10 @@ export default TransaksiStyled;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#059669',
+    backgroundColor: '#ffffff',
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 20,
@@ -598,12 +610,12 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#a7f3d0',
+    color: '#666666',
     opacity: 0.9,
   },
   searchSection: {
@@ -631,7 +643,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1e293b',
+    color: '#333333',
     paddingVertical: 12,
   },
   clearButton: {
@@ -639,7 +651,7 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#999999',
   },
   categorySection: {
     paddingBottom: 16,
@@ -651,7 +663,7 @@ const styles = StyleSheet.create({
     paddingRight: 20,
   },
   categoryChip: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: '#e5e5e5',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 16,
@@ -659,12 +671,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   categoryChipActive: {
-    backgroundColor: '#059669',
+    backgroundColor: '#8325d1ff',
   },
   categoryChipText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748b',
+    color: '#666666',
   },
   categoryChipTextActive: {
     color: '#ffffff',
@@ -700,13 +712,13 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 120,
     borderRadius: 12,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f0f0f0',
   },
   quantityBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#059669',
+    backgroundColor: '#333333',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -724,19 +736,19 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#333333',
     marginBottom: 4,
     lineHeight: 18,
   },
   productCategory: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#666666',
     marginBottom: 6,
   },
   productPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#059669',
+    color: '#333333',
   },
   productActions: {
     alignItems: 'center',
@@ -744,7 +756,7 @@ const styles = StyleSheet.create({
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f0f0f0',
     borderRadius: 20,
     paddingHorizontal: 4,
   },
@@ -752,7 +764,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#059669',
+    backgroundColor: '#3178e2ff',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -764,11 +776,11 @@ const styles = StyleSheet.create({
   quantityText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#3178e2ff',
     paddingHorizontal: 16,
   },
   addButton: {
-    backgroundColor: '#059669',
+    backgroundColor: '#3178e2ff',
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 16,
@@ -794,12 +806,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#666666',
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#999999',
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -836,16 +848,16 @@ const styles = StyleSheet.create({
   },
   cartItemCount: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#666666',
     marginBottom: 2,
   },
   cartTotal: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#333333',
   },
   checkoutButton: {
-    backgroundColor: '#059669',
+    backgroundColor: '#3bd154ff',
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 16,
@@ -881,19 +893,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#f0f0f0',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#333333',
   },
   closeButton: {
     padding: 8,
   },
   closeButtonText: {
     fontSize: 18,
-    color: '#94a3b8',
+    color: '#999999',
   },
   // Cart Modal Styles
   cartList: {
@@ -905,13 +917,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: '#f0f0f0',
   },
   cartItemImage: {
     width: 60,
     height: 60,
     borderRadius: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f0f0f0',
     marginRight: 12,
   },
   cartItemInfo: {
@@ -921,18 +933,18 @@ const styles = StyleSheet.create({
   cartItemName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#333333',
     marginBottom: 4,
   },
   cartItemCategory: {
     fontSize: 12,
-    color: '#64748b',
+    color: '#666666',
     marginBottom: 4,
   },
   cartItemPrice: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#059669',
+    color: '#333333',
   },
   cartItemControls: {
     alignItems: 'flex-end',
@@ -940,13 +952,13 @@ const styles = StyleSheet.create({
   cartItemSubtotal: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#333333',
     marginTop: 8,
   },
   cartSummaryModal: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#f0f0f0',
   },
   totalRow: {
     flexDirection: 'row',
@@ -954,18 +966,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderTopWidth: 2,
-    borderTopColor: '#059669',
+    borderTopColor: '#333333',
     marginTop: 8,
   },
   totalLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#333333',
   },
   totalAmount: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#059669',
+    color: '#333333',
   },
   // Payment Modal Styles
   paymentForm: {
@@ -978,17 +990,17 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#333333',
     marginBottom: 12,
   },
   formInput: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#e0e0e0',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1e293b',
+    color: '#333333',
     marginBottom: 12,
     backgroundColor: '#ffffff',
   },
@@ -998,7 +1010,7 @@ const styles = StyleSheet.create({
   },
   paymentMethodButton: {
     flex: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f0f0f0',
     paddingVertical: 16,
     paddingHorizontal: 12,
     borderRadius: 12,
@@ -1007,33 +1019,33 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   paymentMethodActive: {
-    backgroundColor: '#ecfdf5',
-    borderColor: '#059669',
+    backgroundColor: '#e8e8e8',
+    borderColor: '#333333',
   },
   paymentMethodText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#64748b',
+    color: '#666666',
   },
   paymentMethodTextActive: {
-    color: '#059669',
+    color: '#333333',
   },
   changeInfo: {
-    backgroundColor: '#f0f9ff',
+    backgroundColor: '#f0f8ff',
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
   },
   changeLabel: {
     fontSize: 14,
-    color: '#0369a1',
+    color: '#1a5490',
   },
   changeAmount: {
     fontWeight: '700',
     color: '#0c4a6e',
   },
   orderSummary: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8f8f8',
     padding: 16,
     borderRadius: 12,
   },
@@ -1045,26 +1057,26 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#666666',
   },
   summaryValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1e293b',
+    color: '#333333',
   },
   paymentActions: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#f0f0f0',
   },
   processPaymentButton: {
-    backgroundColor: '#059669',
+    backgroundColor: '#333333',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
   },
   disabledButton: {
-    backgroundColor: '#94a3b8',
+    backgroundColor: '#cccccc',
   },
   processPaymentText: {
     fontSize: 16,

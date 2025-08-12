@@ -190,11 +190,15 @@ const InventoryManagement = () => {
   const renderBarangItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.imageContainer}>
-        <Image 
-          source={{ uri: item.foto_barang }} 
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <Image
+                    source={{
+                      uri: item.foto_barang?.startsWith('http')
+                        ? item.foto_barang
+                        : `https://0844d8854052.ngrok-free.app/storage/${item.foto_barang}`,
+                    }}
+                    style={styles.image}
+                    onError={() => console.log('Image failed to load')}
+                  />
       </View>
       
       <View style={styles.cardContent}>
@@ -209,11 +213,11 @@ const InventoryManagement = () => {
               setActiveTab('barang');
               setEditId(item.id);
               setBarangForm({
-                nama: item.nama_barang,
+                nama: "Halo",
                 harga: item.harga_barang.toString(),
                 stok: item.stok_barang.toString(),
                 kategori: item.id_kategori?.toString() || '',
-                gambar: item.foto_barang || ''
+                gambar: `https://0844d8854052.ngrok-free.app/storage/${item.foto_barang}` || ''
               });
               setModalVisible(true);
             }}
