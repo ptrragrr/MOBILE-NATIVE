@@ -1,9 +1,9 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
   Alert,
   Image,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,23 +12,24 @@ import {
   View
 } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../axios'; // axios yang sudah di-set baseURL
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { setIsLoggedIn } = useContext(AuthContext);
-  
+  const { setIsLoggedIn, token } = useContext(AuthContext);
+
   const [isEditing, setIsEditing] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
-  // User data state
+  const [loading, setLoading] = useState(true);
+
   const [userData, setUserData] = useState({
-    name: 'Ahmad Wijaya',
-    email: 'ahmad.wijaya@tokosejahtera.com',
-    phone: '+62 812-3456-7890',
-    position: 'Store Manager',
-    joinDate: '15 Januari 2023',
-    profilePhoto: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=AW'
+    name: '',
+    email: '',
+    phone: '',
+    position: '',
+    joinDate: '',
+    profilePhoto: ''
   });
 
   const [editedData, setEditedData] = useState(userData);
@@ -38,29 +39,103 @@ export default function ProfilePage() {
     confirmPassword: ''
   });
 
-  // Stats data
-  const userStats = {
-    totalSales: 125750000,
-    totalTransactions: 1847,
-    workingDays: 245,
-    avgDailySales: 513265
-  };
+  // Ambil data user dari backend
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const admin = res.data.user;
 
-  const formatRupiah = (amount) => {
-    const number = typeof amount === 'string' ? parseFloat(amount) : amount;
-    if (isNaN(number)) return 'Rp 0';
-    try {
-      return 'Rp ' + number.toLocaleString('id-ID');
-    } catch (error) {
-      const formatted = number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-      return 'Rp ' + formatted;
+        setUserData({
+          name: admin.name || '',
+          email: admin.email || '',
+          phone: admin.phone || '',
+          position: admin.role?.name || '',
+          joinDate: admin.created_at
+            ? new Date(admin.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+            : '',
+          profilePhoto: admin.profile_photo || 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=PP'
+        });
+
+        setEditedData({
+          name: admin.name || '',
+          email: admin.email || '',
+          phone: admin.phone || '',
+          position: admin.role?.name || '',
+          joinDate: admin.created_at
+            ? new Date(admin.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+            : '',
+          profilePhoto: admin.profile_photo || 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=PP'
+        });
+
+      } catch (err) {
+        console.error('Gagal ambil profil:', err.response?.data || err.message);
+        Alert.alert('Error', 'Gagal memuat data profil');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [token]);
+
+  // Fungsi pilih gambar
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== 'granted') {
+      Alert.alert('Izin diperlukan', 'Izinkan aplikasi mengakses galeri');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setEditedData({ ...editedData, profilePhoto: uri });
     }
   };
 
-  const handleSaveProfile = () => {
-    setUserData(editedData);
-    setIsEditing(false);
-    Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
+  // Simpan profil ke backend
+  const handleSaveProfile = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('name', editedData.name);
+      formData.append('email', editedData.email);
+      formData.append('phone', editedData.phone);
+
+      if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
+        const filename = editedData.profilePhoto.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image`;
+
+        formData.append('profile_photo', {
+          uri: editedData.profilePhoto,
+          name: filename,
+          type
+        });
+      }
+
+      await api.post('/auth/update-profile', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        }
+      });
+
+      setUserData(editedData);
+      setIsEditing(false);
+      Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
+    } catch (err) {
+      console.error('Gagal update profil:', err.response?.data || err.message);
+      Alert.alert('Error', 'Gagal memperbarui profil');
+    }
   };
 
   const handleCancelEdit = () => {
@@ -68,7 +143,7 @@ export default function ProfilePage() {
     setIsEditing(false);
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       Alert.alert('Error', 'Password baru dan konfirmasi password tidak sama!');
       return;
@@ -77,10 +152,16 @@ export default function ProfilePage() {
       Alert.alert('Error', 'Password minimal 6 karakter!');
       return;
     }
-    // Simulate password change
-    setShowChangePasswordModal(false);
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-    Alert.alert('Berhasil', 'Password berhasil diubah!');
+    try {
+      await api.post('/change-password', passwordData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShowChangePasswordModal(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      Alert.alert('Berhasil', 'Password berhasil diubah!');
+    } catch (err) {
+      Alert.alert('Error', 'Gagal mengubah password');
+    }
   };
 
   const handleLogout = () => {
@@ -96,7 +177,7 @@ export default function ProfilePage() {
         <TextInput
           style={[styles.fieldInput, multiline && styles.multilineInput]}
           value={editedData[keyName]}
-          onChangeText={(text) => setEditedData({...editedData, [keyName]: text})}
+          onChangeText={(text) => setEditedData({ ...editedData, [keyName]: text })}
           multiline={multiline}
           numberOfLines={multiline ? 3 : 1}
         />
@@ -106,21 +187,23 @@ export default function ProfilePage() {
     </View>
   );
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Memuat profil...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => router.back()} 
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profil Saya</Text>
-        <TouchableOpacity 
-          onPress={() => setIsEditing(!isEditing)}
-          style={styles.editButton}
-        >
+        <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editButton}>
           <Text style={styles.editIcon}>{isEditing ? '✕' : '✏️'}</Text>
         </TouchableOpacity>
       </View>
@@ -129,11 +212,10 @@ export default function ProfilePage() {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarContainer}>
-            <TouchableOpacity style={styles.avatarWrapper}>
-              <Image 
-                source={{ uri: userData.profilePhoto }} 
+            <TouchableOpacity style={styles.avatarWrapper} onPress={isEditing ? handlePickImage : undefined}>
+              <Image
+                source={{ uri: editedData.profilePhoto }}
                 style={styles.avatarImage}
-                defaultSource={{ uri: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=AW' }}
               />
               {isEditing && (
                 <View style={styles.editPhotoOverlay}>
@@ -141,219 +223,49 @@ export default function ProfilePage() {
                 </View>
               )}
             </TouchableOpacity>
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusText}>●</Text>
-            </View>
           </View>
-          
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userData.name}</Text>
             <Text style={styles.profilePosition}>{userData.position}</Text>
             <View style={styles.joinDateContainer}>
-              <Text style={styles.joinDateIcon}>📅</Text>
               <Text style={styles.joinDate}>Bergabung {userData.joinDate}</Text>
             </View>
           </View>
         </View>
 
-        {/* Personal Information */}
+        {/* Informasi Pribadi */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>👤 Informasi Pribadi</Text>
-          
-          <ProfileField 
-            label="Nama Lengkap" 
-            value={userData.name} 
-            isEditable={true}
-            keyName="name"
-          />
-          <ProfileField 
-            label="Email" 
-            value={userData.email} 
-            isEditable={true}
-            keyName="email"
-          />
-          <ProfileField 
-            label="No. Telepon" 
-            value={userData.phone} 
-            isEditable={true}
-            keyName="phone"
-          />
-          <ProfileField 
-            label="Posisi" 
-            value={userData.position} 
-            isEditable={false}
-          />
-          
-          {/* Photo Admin Section */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>Foto Profil</Text>
-            <View style={styles.photoSection}>
-              <Image 
-                source={{ uri: userData.profilePhoto }} 
-                style={styles.previewPhoto}
-                defaultSource={{ uri: 'https://via.placeholder.com/150/4F46E5/FFFFFF?text=AW' }}
-              />
-              {isEditing && (
-                <TouchableOpacity style={styles.changePhotoButton}>
-                  <Text style={styles.changePhotoIcon}>📷</Text>
-                  <Text style={styles.changePhotoText}>Ganti Foto</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
+          <ProfileField label="Nama Lengkap" value={userData.name} isEditable keyName="name" />
+          <ProfileField label="Email" value={userData.email} isEditable keyName="email" />
+          <ProfileField label="No. Telepon" value={userData.phone} isEditable keyName="phone" />
+          <ProfileField label="Posisi" value={userData.position} isEditable={false} />
         </View>
 
-        {/* Action Buttons */}
+        {/* Tombol Aksi */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>⚙️ Pengaturan</Text>
-          
           {isEditing ? (
             <View style={styles.editActions}>
-              <TouchableOpacity 
-                style={styles.cancelButton} 
-                onPress={handleCancelEdit}
-              >
-                <Text style={styles.cancelIcon}>↶</Text>
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
                 <Text style={styles.cancelButtonText}>Batal</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.saveButton} 
-                onPress={handleSaveProfile}
-              >
-                <Text style={styles.saveIcon}>✓</Text>
+              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
                 <Text style={styles.saveButtonText}>Simpan</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <>
-              <TouchableOpacity 
-                style={styles.actionButton} 
-                onPress={() => setShowChangePasswordModal(true)}
-              >
-                <Text style={styles.actionIcon}>🔐</Text>
+              <TouchableOpacity style={styles.actionButton} onPress={() => setShowChangePasswordModal(true)}>
                 <Text style={styles.actionText}>Ubah Password</Text>
-                <Text style={styles.actionArrow}>→</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.actionButton, styles.logoutAction]} 
-                onPress={() => setShowLogoutModal(true)}
-              >
-                <Text style={styles.actionIcon}>🚪</Text>
-                <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
-                <Text style={styles.actionArrow}>→</Text>
+              <TouchableOpacity style={styles.actionButton} onPress={() => setShowLogoutModal(true)}>
+                <Text style={styles.actionText}>Logout</Text>
               </TouchableOpacity>
             </>
           )}
         </View>
-
-        <View style={styles.footerPadding} />
       </ScrollView>
-
-      {/* Change Password Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showChangePasswordModal}
-        onRequestClose={() => setShowChangePasswordModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.passwordModalContainer}>
-            <Text style={styles.modalTitle}>🔐 Ubah Password</Text>
-            
-            <View style={styles.passwordInputContainer}>
-              <Text style={styles.inputLabel}>Password Lama</Text>
-              <TextInput
-                style={styles.passwordInput}
-                secureTextEntry
-                value={passwordData.currentPassword}
-                onChangeText={(text) => setPasswordData({...passwordData, currentPassword: text})}
-                placeholder="Masukkan password lama"
-              />
-            </View>
-
-            <View style={styles.passwordInputContainer}>
-              <Text style={styles.inputLabel}>Password Baru</Text>
-              <TextInput
-                style={styles.passwordInput}
-                secureTextEntry
-                value={passwordData.newPassword}
-                onChangeText={(text) => setPasswordData({...passwordData, newPassword: text})}
-                placeholder="Masukkan password baru"
-              />
-            </View>
-
-            <View style={styles.passwordInputContainer}>
-              <Text style={styles.inputLabel}>Konfirmasi Password Baru</Text>
-              <TextInput
-                style={styles.passwordInput}
-                secureTextEntry
-                value={passwordData.confirmPassword}
-                onChangeText={(text) => setPasswordData({...passwordData, confirmPassword: text})}
-                placeholder="Konfirmasi password baru"
-              />
-            </View>
-
-            <View style={styles.passwordModalActions}>
-              <TouchableOpacity 
-                style={styles.passwordCancelButton} 
-                onPress={() => setShowChangePasswordModal(false)}
-              >
-                <Text style={styles.passwordCancelText}>Batal</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.passwordSaveButton} 
-                onPress={handleChangePassword}
-              >
-                <Text style={styles.passwordSaveText}>Ubah Password</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Logout Confirmation Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={showLogoutModal}
-        onRequestClose={() => setShowLogoutModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.logoutModalContainer}>
-            <View style={styles.logoutIconContainer}>
-              <View style={styles.logoutIconCircle}>
-                <Text style={styles.logoutModalIcon}>👋</Text>
-              </View>
-            </View>
-            
-            <View style={styles.logoutModalContent}>
-              <Text style={styles.logoutModalTitle}>Sampai Jumpa!</Text>
-              <Text style={styles.logoutModalMessage}>
-                Yakin ingin keluar dari Dashboard POS?
-              </Text>
-            </View>
-            
-            <View style={styles.logoutModalActions}>
-              <TouchableOpacity 
-                style={styles.stayButton} 
-                onPress={() => setShowLogoutModal(false)}
-              >
-                <Text style={styles.stayButtonText}>Tetap Disini</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.logoutConfirmButton} 
-                onPress={handleLogout}
-              >
-                <Text style={styles.logoutConfirmText}>Ya, Keluar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -393,7 +305,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4F46E5', // Changed from pink to indigo
+    backgroundColor: '#4b88e4ff', // Changed from pink to indigo
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 2,
@@ -425,7 +337,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4F46E5', // Changed from pink to indigo
+    backgroundColor: '#4b88e4ff', // Changed from pink to indigo
   },
   editPhotoOverlay: {
     position: 'absolute',
@@ -469,7 +381,7 @@ const styles = StyleSheet.create({
   },
   profilePosition: {
     fontSize: 16,
-    color: '#4F46E5', // Changed from pink to indigo
+    color: '#4b88e4ff', // Changed from pink to indigo
     fontWeight: '600',
     marginBottom: 8,
   },
@@ -554,7 +466,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#4F46E5', // Changed from pink to indigo
+    borderColor: '#4b88e4ff', // Changed from pink to indigo
   },
   multilineInput: {
     height: 80,
@@ -585,7 +497,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     flex: 1,
-    backgroundColor: '#4F46E5', // Changed from pink to indigo
+    backgroundColor: '#4b88e4ff', // Changed from pink to indigo
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: 'row',
@@ -662,7 +574,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#4F46E5', // Changed from pink to indigo
+    backgroundColor: '#4b88e4ff', // Changed from pink to indigo
     borderRadius: 8,
   },
   changePhotoIcon: {
@@ -736,7 +648,7 @@ const styles = StyleSheet.create({
   },
   passwordSaveButton: {
     flex: 1,
-    backgroundColor: '#4F46E5', // Changed from pink to indigo
+    backgroundColor: '#4b88e4ff', // Changed from pink to indigo
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -764,7 +676,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#4F46E5', // Changed from pink to indigo
+    backgroundColor: '#4b88e4ff', // Changed from pink to indigo
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,

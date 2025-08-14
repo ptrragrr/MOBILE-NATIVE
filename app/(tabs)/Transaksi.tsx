@@ -29,8 +29,6 @@ const TransaksiStyled = () => {
   const [showCartModal, setShowCartModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentData, setPaymentData] = useState({
-    customerName: '',
-    customerPhone: '',
     paymentMethod: 'cash',
     cashReceived: 0
   });
@@ -136,42 +134,48 @@ const removeFromCart = (itemId) => {
     setShowPaymentModal(true);
   };
 
-  const finalizePayment = async () => {
-    try {
-      const transactionData = {
-        items: cart,
-        total: totalAmount,
-        customer: {
-          name: paymentData.customerName,
-          phone: paymentData.customerPhone
-        },
-        payment: {
-          method: paymentData.paymentMethod,
-          cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
-          change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
-        },
-        timestamp: new Date().toISOString()
-      };
+const finalizePayment = async () => {
+  try {
+    console.log("Cart : ", cart)
+    // Siapkan data transaksi
+    const transactionData = {
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.nama_barang,
+        price: item.price,
+        quantity: item.quantity,
+        subtotal: item.price * item.quantity
+      })),
+      total: totalAmount,
+      payment: {
+        method: paymentData.paymentMethod,
+        cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
+        change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
+      },
+      timestamp: new Date().toISOString()
+    };
 
-      console.log('Processing transaction:', transactionData);
-      
-      // Reset semuanya
-      setCart([]);
-      setTotalAmount(0);
-      setShowPaymentModal(false);
-      setPaymentData({
-        customerName: '',
-        customerPhone: '',
-        paymentMethod: 'cash',
-        cashReceived: 0
-      });
-      
-      alert(`Transaksi berhasil!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}\n${paymentData.paymentMethod === 'cash' ? `Uang Diterima: Rp ${paymentData.cashReceived.toLocaleString('id-ID')}\nKembalian: Rp ${(paymentData.cashReceived - totalAmount).toLocaleString('id-ID')}` : 'Pembayaran Digital'}`);
-    } catch (err) {
-      console.error('Transaction failed:', err);
-      alert('Transaksi gagal!');
-    }
-  };
+    console.log('📦 Mengirim transaksi:', transactionData);
+
+    // Kirim ke backend Laravel
+    const res = await api.post('/transaksi', transactionData);
+    console.log('✅ Respon Laravel:', res.data);
+
+    // Reset cart & form pembayaran
+    setCart([]);
+    setTotalAmount(0);
+    setShowPaymentModal(false);
+    setPaymentData({
+      paymentMethod: 'cash',
+      cashReceived: 0
+    });
+
+    alert(`✅ Transaksi berhasil disimpan!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}`);
+  } catch (err) {
+    console.error('❌ Gagal menyimpan transaksi:', err.response?.data || err.message);
+    alert('❌ Transaksi gagal disimpan! Cek koneksi atau server.');
+  }
+};
 
   useEffect(() => {
     fetchBarang();
@@ -201,7 +205,7 @@ const removeFromCart = (itemId) => {
             source={{
               uri: item.foto_barang?.startsWith('http')
                 ? item.foto_barang
-                : `https://0844d8854052.ngrok-free.app/storage/${item.foto_barang}`,
+                : `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}`,
             }}
             style={styles.productImage}
             onError={() => console.log('Image failed to load')}
@@ -397,11 +401,12 @@ const removeFromCart = (itemId) => {
                 <View style={styles.cartItem}>
                   <Image
                     source={{
-                      uri: item.gambar_url?.startsWith('http')
-                        ? item.gambar_url
-                        : `https://domain-api.com/uploads/${item.gambar_url}`,
+                      uri: item.foto_barang?.startsWith('http')
+                        ? item.foto_barang
+                        : `https://d83194dadaea.ngrok-free.app/storage/${item.foto_barang}`,
                     }}
                     style={styles.cartItemImage}
+                    onError={() => console.log('Image failed to load')}
                   />
                   <View style={styles.cartItemInfo}>
                     <Text style={styles.cartItemName}>{item.nama_barang}</Text>
@@ -465,24 +470,6 @@ const removeFromCart = (itemId) => {
             </View>
 
             <ScrollView style={styles.paymentForm}>
-              {/* Customer Info */}
-              {/* <View style={styles.formSection}>
-                <Text style={styles.sectionTitle}>Info Pelanggan</Text>
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="Nama Pelanggan"
-                  value={paymentData.customerName}
-                  onChangeText={(text) => setPaymentData(prev => ({ ...prev, customerName: text }))}
-                />
-                <TextInput
-                  style={styles.formInput}
-                  placeholder="No. Telepon"
-                  value={paymentData.customerPhone}
-                  onChangeText={(text) => setPaymentData(prev => ({ ...prev, customerPhone: text }))}
-                  keyboardType="phone-pad"
-                />
-              </View> */}
-
               {/* Payment Method */}
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
@@ -512,25 +499,25 @@ const removeFromCart = (itemId) => {
                 <View style={styles.formSection}>
                   <Text style={styles.sectionTitle}>Uang Tunai</Text>
                   <TextInput
-  style={styles.formInput}
-  placeholder="Jumlah uang yang diterima"
-  value={
-    paymentData.cashReceived
-      ? `Rp ${paymentData.cashReceived.toLocaleString('id-ID')}`
-      : ''
-  }
-  onChangeText={(text) => {
-    // Ambil hanya angka dari input
-    const numericValue = parseInt(text.replace(/[^0-9]/g, ''), 10) || 0;
+                    style={styles.formInput}
+                    placeholder="Jumlah uang yang diterima"
+                    value={
+                      paymentData.cashReceived
+                        ? `Rp ${paymentData.cashReceived.toLocaleString('id-ID')}`
+                        : ''
+                    }
+                    onChangeText={(text) => {
+                      // Ambil hanya angka dari input
+                      const numericValue = parseInt(text.replace(/[^0-9]/g, ''), 10) || 0;
 
-    // Simpan nilai angka ke state (untuk perhitungan)
-    setPaymentData(prev => ({
-      ...prev,
-      cashReceived: numericValue
-    }));
-  }}
-  keyboardType="numeric"
-/>
+                      // Simpan nilai angka ke state (untuk perhitungan)
+                      setPaymentData(prev => ({
+                        ...prev,
+                        cashReceived: numericValue
+                      }));
+                    }}
+                    keyboardType="numeric"
+                  />
                   <View style={styles.changeInfo}>
                     <Text style={styles.changeLabel}>
                       Kembalian: 
@@ -572,13 +559,11 @@ const removeFromCart = (itemId) => {
               <TouchableOpacity
                 style={[
                   styles.processPaymentButton,
-                  (!paymentData.customerName || 
-                   (paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount)) && 
+                  (paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount) && 
                   styles.disabledButton
                 ]}
                 onPress={finalizePayment}
-                disabled={!paymentData.customerName || 
-                         (paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount)}
+                disabled={paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount}
               >
                 <Text style={styles.processPaymentText}>
                   Proses Pembayaran
@@ -620,7 +605,7 @@ const styles = StyleSheet.create({
   },
   searchSection: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 20, 
     paddingBottom: 12,
   },
   searchContainer: {
@@ -1077,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#cccccc',
-  },
+  },                          
   processPaymentText: {
     fontSize: 16,
     fontWeight: '600',

@@ -1,6 +1,5 @@
 // app/AuthStack/LoginScreen.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useContext, useState } from 'react';
@@ -18,6 +17,7 @@ import {
   View
 } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
+import api from '../axios';
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,8 +38,8 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        'https://0844d8854052.ngrok-free.app/api/auth/login',
+      const response = await api.post(
+        '/auth/login',
         { email: username, password }
       );
 

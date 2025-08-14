@@ -194,7 +194,7 @@ const InventoryManagement = () => {
                     source={{
                       uri: item.foto_barang?.startsWith('http')
                         ? item.foto_barang
-                        : `https://0844d8854052.ngrok-free.app/storage/${item.foto_barang}`,
+                        : `https://2c4c02c6ab72.ngrok-free.app/storage/${item.foto_barang}`,
                     }}
                     style={styles.image}
                     onError={() => console.log('Image failed to load')}
@@ -217,7 +217,7 @@ const InventoryManagement = () => {
                 harga: item.harga_barang.toString(),
                 stok: item.stok_barang.toString(),
                 kategori: item.id_kategori?.toString() || '',
-                gambar: `https://0844d8854052.ngrok-free.app/storage/${item.foto_barang}` || ''
+                gambar: `https://2c4c02c6ab72.ngrok-free.app/storage/${item.foto_barang}` || ''
               });
               setModalVisible(true);
             }}

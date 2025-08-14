@@ -7,6 +7,8 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import AntDesign from '@expo/vector-icons/AntDesign';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
@@ -34,23 +36,23 @@ export default function TabLayout() {
         }}
       />
      <Tabs.Screen
-        name="Barang"
+        name="Manajemen"
         options={{
-          title: 'Barang',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="barang.fill" color={color} />,
+          title: 'Manajemen',
+          tabBarIcon: ({ color }) => <AntDesign name="upload" size={24} color="black" />,
         }}
       />
       <Tabs.Screen
         name="Transaksi"
         options={{
           title: 'Transaksi',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="transaksi.fill" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome6 name="money-bill-transfer" size={24} color="black" />,
         }}
       /><Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="profile.fill" color={color} />,
+          tabBarIcon: ({ color }) => <AntDesign name="user" size={24} color="black" />,
         }}
       />
       {/* <Tabs.Screen
