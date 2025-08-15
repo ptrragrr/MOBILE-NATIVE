@@ -102,6 +102,25 @@ const InventoryManagement = () => {
     } catch (err) {
       Alert.alert('Error', 'Gagal menyimpan barang');
     }
+    // try {
+    //   if (editId) {
+    //     await api.post(`/tambah/barang/${editId}?_method=PUT`, formData, {
+    //       headers: { 'Content-Type': 'multipart/form-data' }
+    //     });
+    //     Alert.alert('Sukses', 'Barang berhasil diupdate!');
+    //   } else {
+    //     await api.post('/tambah/barang/store', formData, {
+    //       headers: { 'Content-Type': 'multipart/form-data' }
+    //     });
+    //     Alert.alert('Sukses', 'Barang berhasil ditambahkan!');
+    //   }
+    //   fetchBarang();
+    //   setBarangForm({ nama: '', harga: '', stok: '', kategori: '', gambar: '' });
+    //   setEditId(null);
+    //   setModalVisible(false);
+    // } catch (err) {
+    //   Alert.alert('Error', 'Gagal menyimpan barang');
+    // }
   };
 
   const handleBarangDelete = async (id) => {
@@ -194,7 +213,7 @@ const InventoryManagement = () => {
                     source={{
                       uri: item.foto_barang?.startsWith('http')
                         ? item.foto_barang
-                        : `https://2c4c02c6ab72.ngrok-free.app/storage/${item.foto_barang}`,
+                        : `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}`,
                     }}
                     style={styles.image}
                     onError={() => console.log('Image failed to load')}
@@ -213,11 +232,11 @@ const InventoryManagement = () => {
               setActiveTab('barang');
               setEditId(item.id);
               setBarangForm({
-                nama: "Halo",
+                nama: item.nama_barang,
                 harga: item.harga_barang.toString(),
                 stok: item.stok_barang.toString(),
                 kategori: item.id_kategori?.toString() || '',
-                gambar: `https://2c4c02c6ab72.ngrok-free.app/storage/${item.foto_barang}` || ''
+                gambar: `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}` || ''
               });
               setModalVisible(true);
             }}
