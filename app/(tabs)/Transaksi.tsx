@@ -1,4 +1,5 @@
 // TransaksiStyled.js
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
   Animated,
@@ -32,6 +33,8 @@ const TransaksiStyled = () => {
     paymentMethod: 'cash',
     cashReceived: 0
   });
+
+  
 
  const fetchBarang = async () => {
   try {
@@ -135,25 +138,32 @@ const removeFromCart = (itemId) => {
   };
 
 const finalizePayment = async () => {
+
+  const userData = await AsyncStorage.getItem('User');
+  const user = userData ? JSON.parse(userData) : null;
+  console.log("user : ", user);
+
   try {
     console.log("Cart : ", cart)
     // Siapkan data transaksi
-    const transactionData = {
-      items: cart.map(item => ({
-        id: item.id,
-        name: item.nama_barang,
-        price: item.price,
-        quantity: item.quantity,
-        subtotal: item.price * item.quantity
-      })),
-      total: totalAmount,
-      payment: {
-        method: paymentData.paymentMethod,
-        cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
-        change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
-      },
-      timestamp: new Date().toISOString()
-    };
+   const transactionData = {
+  nama_kasir: user.name, // Ambil dari context/login user
+  items: cart.map(item => ({
+    id: item.id,
+    name: item.nama_barang,
+    price: item.price,
+    quantity: item.quantity,
+    subtotal: item.price * item.quantity
+  })),
+  total: totalAmount,
+  payment: {
+    method: paymentData.paymentMethod,
+    cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
+    change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
+  },
+  timestamp: new Date().toISOString()
+};
+
 
     console.log('📦 Mengirim transaksi:', transactionData);
 
@@ -703,7 +713,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: '#333333',
+    backgroundColor: '#e73737ff',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -733,7 +743,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#333333',
+    color: '#28a745',
   },
   productActions: {
     alignItems: 'center',
@@ -842,7 +852,7 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   checkoutButton: {
-    backgroundColor: '#3bd154ff',
+    backgroundColor: '#28a745',
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 16,

@@ -45,7 +45,9 @@ export default function LoginScreen() {
 
       if (response.data.status) {
         const token = response.data.token;
+        const user = response.data.user;
         await AsyncStorage.setItem('token', token);
+        await AsyncStorage.setItem('User', JSON.stringify(user));
 
         console.log('Login success:', response.data);
         
