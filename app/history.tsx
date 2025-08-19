@@ -47,12 +47,13 @@ export default function HistoryScreen() {
         date: new Date(item.created_at).toLocaleDateString("id-ID"),
         time: new Date(item.created_at).toLocaleTimeString("id-ID"),
         barang: (item.details || []).map((d: any) => ({
-  nama: d.barang?.nama_barang || "-",
-  qty: d.jumlah,
-  harga: Number(d.harga_satuan) || 0,
-  subtotal: Number(d.subtotal) || 0,
-})),
+        nama: d.barang?.nama_barang || "-",
+        qty: d.jumlah,
+        harga: Number(d.harga_satuan) || 0,
+        subtotal: Number(d.total_harga) || 0,
+      })),
       }));
+      console.log("MAPPED HISTORY:", JSON.stringify(mapped, null, 2));
       setSalesHistory(mapped);
     } catch (err) {
       console.error("Gagal memuat history:", err);

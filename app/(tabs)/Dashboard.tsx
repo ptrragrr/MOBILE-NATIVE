@@ -40,6 +40,7 @@ const Dashboard = () => {
   const [salesHistory, setSalesHistory] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  
   const fetchHistory = async () => {
     try {
       setLoading(true);
