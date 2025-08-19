@@ -101,6 +101,9 @@ const InventoryManagement = () => {
       setModalVisible(false);
     } catch (err) {
       Alert.alert('Error', 'Gagal menyimpan barang');
+    } finally {
+      fetchBarang();
+    fetchKategori();
     }
     // try {
     //   if (editId) {

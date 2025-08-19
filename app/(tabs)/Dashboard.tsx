@@ -4,7 +4,6 @@ import React, { useContext, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,315 +11,253 @@ import {
   View,
 } from 'react-native';
 import { AuthContext } from '../../context/AuthContext';
-import api from '../axios'; // axios.ts berada di app/
+import api from '../axios';
 
-const formatRupiah = (amount: number | string | null | undefined) => {
-  const number = typeof amount === 'string' ? parseFloat(amount) : amount ?? 0;
-  if (isNaN(Number(number))) return 'Rp 0';
-  try {
-    return 'Rp ' + Number(number).toLocaleString('id-ID');
-  } catch (error) {
-    const formatted = String(number).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return 'Rp ' + formatted;
-  }
+const formatRupiah = (angka: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(angka);
 };
 
-type Transaction = {
+interface Transaction {
   id: string;
-  time?: string;
+  kasir: string;
   amount: number;
-  customer?: string;
-  date?: string;
-  status?: 'success' | 'cancelled' | string;
-  items?: string;
-};
+  status: string;
+  date: string;
+  time: string;
+  items: any[];
+}
 
-export default function Dashboard() {
+const Dashboard = () => {
   const router = useRouter();
-  const { setIsLoggedIn } = useContext(AuthContext);
+  const { userInfo } = useContext(AuthContext);
 
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-
-  const [todaySales, setTodaySales] = useState<number>(0);
-  const [todayTransactions, setTodayTransactions] = useState<number>(0);
-  const [totalProducts, setTotalProducts] = useState<number>(0);
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [todaySales, setTodaySales] = useState(0);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [salesHistory, setSalesHistory] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [loading, setLoading] = useState<boolean>(true);
-
-  const fetchDashboardData = async () => {
+  const fetchHistory = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/dashboard'); // pastikan route /api/dashboard ada
+      const res = await api.get('/history', {
+        headers: {
+          Authorization: `Bearer ${userInfo?.token}`,
+        },
+      });
 
-      // fallback kalau struktur berbeda
-      const data = res.data ?? {};
+      console.log("DATA HISTORY:", res.data);
 
-      setTodaySales(data.today_sales ?? 0);
-      setTodayTransactions(data.today_transactions ?? 0);
-      setTotalProducts(data.total_products ?? 0);
+      const mapped = res.data.data.map((item: any) => ({
+  id: item.id,
+  kasir: item.nama_kasir,
+  kode: item.kode_transaksi, // kode transaksi
+  metode: item.metode_pembayaran, // metode pembayaran
+  amount: Number(item.total_transaksi) || 0,
+  date: new Date(item.created_at).toLocaleDateString("id-ID"),
+  time: new Date(item.created_at).toLocaleTimeString("id-ID"),
+  barang: (item.detail || []).map((d: any) => ({
+    nama: d.nama_barang,
+    qty: d.jumlah,
+    harga: Number(d.harga_satuan) || 0,
+    subtotal: Number(d.subtotal) || 0,
+  })),
+}));
+      // const mapped = res.data.data.map((item: any) => ({
+      //   id: item.id,
+      //   kasir: item.nama_kasir || "Unknown",
+      //   amount: Number(item.total_transaksi) || 0,   // ✅ ambil total_transaksi
+      //   date: new Date(item.created_at).toLocaleDateString("id-ID"),
+      //   time: new Date(item.created_at).toLocaleTimeString("id-ID"),
+      //   items: item.keranjang || []
+      // }));
 
-      // Pastikan arrays selalu ada
-      setRecentTransactions(Array.isArray(data.recent_transactions) ? data.recent_transactions : []);
-      setSalesHistory(Array.isArray(data.sales_history) ? data.sales_history : []);
-    } catch (err: any) {
-      console.error('Gagal ambil data dashboard', err);
-      // tampilkan pesan singkat ke user
-      if (err?.response) {
-        // server response available
-        const status = err.response.status;
-        if (status === 404) {
-          Alert.alert('Error 404', 'Endpoint /dashboard tidak ditemukan. Periksa route API Laravel.');
-        } else {
-          Alert.alert(`Error ${status}`, err.response?.data?.message ?? 'Gagal ambil data dari server.');
-        }
-      } else if (err?.request) {
-        Alert.alert('Network Error', 'Tidak dapat terhubung ke server. Periksa koneksi / baseURL.');
-      } else {
-        Alert.alert('Error', 'Terjadi kesalahan saat mengambil data.');
-      }
+      setSalesHistory(mapped);
+    } catch (err) {
+      console.error("Gagal memuat history:", err);
+      Alert.alert('Gagal memuat history');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    // Kamu bisa tambahkan dependency untuk refresh berkala
-    // atau pull-to-refresh implementasi bila perlu
+    fetchHistory();
   }, []);
 
-  const handleConfirmLogout = () => {
-    setShowLogoutModal(false);
-    setIsLoggedIn(false);
-    router.replace('/AuthStack/LoginScreen');
-  };
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={{ marginTop: 8, color: '#64748B' }}>Memuat data...</Text>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Dashboard</Text>
-          <Text style={styles.subtitle}>Toko Sejahtera</Text>
-        </View>
-        <TouchableOpacity onPress={() => router.push('/profile')} style={styles.profileButton}>
-          <Text style={styles.profileIcon}>👤</Text>
-        </TouchableOpacity>
+        <Text style={styles.welcomeText}>
+          Halo, {userInfo?.user?.name || "User"}! 👋
+        </Text>
+        <Text style={styles.subtitle}>Dashboard Penjualan</Text>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Quick Stats */}
-        <View style={styles.quickStats}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{formatRupiah(todaySales)}</Text>
-            <Text style={styles.statLabel}>Penjualan Hari Ini</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{todayTransactions}</Text>
-            <Text style={styles.statLabel}>Transaksi</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{totalProducts}</Text>
-            <Text style={styles.statLabel}>Produk</Text>
-          </View>
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4a90e2" />
+          <Text style={styles.loadingText}>Memuat data...</Text>
         </View>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryCard}>
+              <View style={styles.cardIcon}>
+                <Text style={styles.iconText}>💰</Text>
+              </View>
+              <Text style={styles.summaryTitle}>Penjualan Hari Ini</Text>
+              <Text style={styles.summaryValue}>{formatRupiah(todaySales)}</Text>
+            </View>
 
-        {/* Recent Transactions */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Transaksi Terbaru</Text>
-            <TouchableOpacity onPress={() => setShowHistoryModal(true)} style={styles.viewAllButton}>
-              <Text style={styles.viewAllText}>Lihat Semua</Text>
-            </TouchableOpacity>
+            <View style={styles.summaryCard}>
+              <View style={styles.cardIcon}>
+                <Text style={styles.iconText}>📦</Text>
+              </View>
+              <Text style={styles.summaryTitle}>Total Produk</Text>
+              <Text style={styles.summaryValue}>{totalProducts}</Text>
+            </View>
           </View>
-          <View style={styles.transactionsList}>
-            {recentTransactions.length === 0 ? (
-              <Text style={{ color: '#94A3B8' }}>Belum ada transaksi</Text>
-            ) : (
-              recentTransactions.map((transaction) => (
-                <View key={transaction.id} style={styles.transactionItem}>
-                  <View>
-                    <Text style={styles.transactionId}>{transaction.id}</Text>
-                    <Text style={styles.transactionCustomer}>{transaction.customer ?? '-'}</Text>
-                  </View>
-                  <View style={styles.transactionRight}>
-                    <Text style={styles.transactionAmount}>{formatRupiah(transaction.amount)}</Text>
-                    <Text style={styles.transactionTime}>{transaction.time ?? ''}</Text>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
 
-        <View style={styles.bottomPadding} />
-      </ScrollView>
-
-      {/* History Modal */}
-      <Modal animationType="slide" transparent={true} visible={showHistoryModal} onRequestClose={() => setShowHistoryModal(false)}>
-        <View style={styles.historyModalOverlay}>
-          <View style={styles.historyModalContainer}>
-            {/* Header */}
-            <View style={styles.historyHeader}>
-              <Text style={styles.historyTitle}>History Penjualan</Text>
-              <TouchableOpacity onPress={() => setShowHistoryModal(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>×</Text>
+          {/* History Section */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
+              <TouchableOpacity 
+                style={styles.viewAllButton}
+                onPress={() => router.push('/history')}
+              >
+                <Text style={styles.viewAllText}>Lihat Semua</Text>
               </TouchableOpacity>
             </View>
 
-            {/* List */}
-            <ScrollView style={styles.historyList}>
-              {salesHistory.length === 0 ? (
-                <Text style={{ color: '#94A3B8' }}>Belum ada riwayat penjualan</Text>
-              ) : (
-                salesHistory.map((item) => (
-                  <View key={item.id} style={styles.historyCard}>
-                    <View style={styles.cardHeader}>
-                      <Text style={styles.cardId}>{item.id}</Text>
-                      <View
-                        style={[
-                          styles.badge,
-                          { backgroundColor: item.status === 'success' ? '#DCFCE7' : '#FEE2E2' },
-                        ]}
-                      >
-                        <Text style={[styles.badgeText, { color: item.status === 'success' ? '#059669' : '#DC2626' }]}>
-                          {item.status === 'success' ? 'Berhasil' : 'Dibatalkan'}
+            {salesHistory.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>📋</Text>
+                <Text style={styles.emptyText}>Belum ada transaksi</Text>
+              </View>
+            ) : (
+              <View style={styles.historyList}>
+                {salesHistory.slice(0, 5).map((transaction, index) => (
+                  <TouchableOpacity 
+                    key={transaction.id || index} 
+                    style={styles.historyCard}
+                  >
+                    <View style={styles.historyLeft}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>
+                          {transaction.kasir ? transaction.kasir.charAt(0).toUpperCase() : 'U'}
+                        </Text>
+                      </View>
+                      <View style={styles.historyInfo}>
+                        <Text style={styles.historyKasir}>
+                          {transaction.kasir || 'Unknown'}
+                        </Text>
+                        <Text style={styles.historyDate}>
+                          {transaction.date} • {transaction.time}
                         </Text>
                       </View>
                     </View>
-
-                    <Text style={styles.cardCustomer}>{item.customer ?? '-'}</Text>
-                    <Text style={styles.cardItems}>{item.items ?? '-'}</Text>
-                    <Text style={styles.cardDate}>{(item.date ?? '') + (item.time ? ` • ${item.time}` : '')}</Text>
-                    <Text style={styles.cardAmount}>{formatRupiah(item.amount)}</Text>
-                  </View>
-                ))
-              )}
-            </ScrollView>
-
-            {/* Footer */}
-            <View style={styles.historyFooter}>
-              <Text style={styles.footerText}>
-                Total: {salesHistory.filter((t) => t.status === 'success').length} transaksi berhasil
-              </Text>
-            </View>
+                    <Text style={styles.historyAmount}>
+                      {formatRupiah(transaction.amount)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
-        </View>
-      </Modal>
-
-      {/* Logout Modal */}
-      <Modal animationType="fade" transparent={true} visible={showLogoutModal} onRequestClose={() => setShowLogoutModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Keluar dari Dashboard?</Text>
-            <Text style={styles.modalMessage}>Data Anda akan tersimpan dengan aman</Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowLogoutModal(false)}>
-                <Text style={styles.cancelButtonText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmLogout}>
-                <Text style={styles.confirmButtonText}>Keluar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </View>
+        </>
+      )}
+    </ScrollView>
   );
-}
+};
+
+export default Dashboard;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#f5f7fa',
   },
   header: {
-    marginTop: 50,
-    marginBottom: 24,
-    marginHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  subtitle: {
-    marginTop: 2,
-    color: '#64748B',
-    fontSize: 16,
-  },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  profileIcon: {
-    fontSize: 20,
-  },
-  scrollView: {
-    flex: 1,
+    backgroundColor: '#ffffff',
     paddingHorizontal: 20,
-  },
-  quickStats: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  statItem: {
-    paddingVertical: 12,
+    paddingTop: 50,
+    paddingBottom: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#e9ecef',
   },
-  statValue: {
+  welcomeText: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: 'bold',
+    color: '#2c3e50',
     marginBottom: 4,
   },
-  statLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
+  subtitle: {
+    fontSize: 16,
+    color: '#7f8c8d',
   },
-  section: {
-    backgroundColor: '#FFFFFF',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#7f8c8d',
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: '#ffffff',
     borderRadius: 16,
     padding: 20,
-    marginBottom: 20,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  cardIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  iconText: {
+    fontSize: 24,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    color: '#6c757d',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2c3e50',
+    textAlign: 'center',
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -329,225 +266,91 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2c3e50',
   },
   viewAllButton: {
+    backgroundColor: '#4a90e2',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#2563EB',
-    borderRadius: 8,
+    borderRadius: 20,
   },
   viewAllText: {
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
-  transactionsList: {
-    gap: 12,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
-  },
-  transactionId: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 2,
-  },
-  transactionCustomer: {
-    fontSize: 14,
-    color: '#64748B',
-  },
-  transactionRight: {
-    alignItems: 'flex-end',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#059669',
-    marginBottom: 2,
-  },
-  transactionTime: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  bottomPadding: {
-    height: 30,
-  },
-
-  // History Modal Styles
-  historyModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  historyModalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    marginTop: 60,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  historyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  historyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButtonText: {
-    fontSize: 20,
-    color: '#64748B',
-    fontWeight: 'bold',
-  },
-  historyList: {
-    flex: 1,
-    padding: 24,
-  },
-  historyCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#2563EB',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardId: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1E293B',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  cardCustomer: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  cardItems: {
-    fontSize: 14,
-    color: '#64748B',
-    marginBottom: 8,
-  },
-  cardDate: {
-    fontSize: 13,
-    color: '#94A3B8',
-    marginBottom: 8,
-  },
-  cardAmount: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#059669',
-  },
-  historyFooter: {
-    padding: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    backgroundColor: '#F8FAFC',
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-
-  // Logout Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 320,
+  emptyState: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 40,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: 8,
-    textAlign: 'center',
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
-  modalMessage: {
-    fontSize: 14,
-    color: '#64748B',
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 20,
+  emptyText: {
+    fontSize: 16,
+    color: '#6c757d',
   },
-  modalActions: {
+  historyList: {
+    gap: 8,
+  },
+  historyCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
     flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  cancelButton: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: 12,
+    justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  cancelButtonText: {
+  historyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#e3f2fd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1976d2',
+  },
+  historyInfo: {
+    flex: 1,
+  },
+  historyKasir: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#475569',
+    color: '#2c3e50',
+    marginBottom: 2,
   },
-  confirmButton: {
-    flex: 1,
-    backgroundColor: '#EF4444',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
+  historyDate: {
+    fontSize: 13,
+    color: '#6c757d',
   },
-  confirmButtonText: {
+  historyAmount: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontWeight: 'bold',
+    color: '#27ae60',
   },
 });

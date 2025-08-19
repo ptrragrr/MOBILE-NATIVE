@@ -35,8 +35,7 @@ const TransaksiStyled = () => {
   });
 
   
-
- const fetchBarang = async () => {
+const fetchBarang = async () => {
   try {
     const res = await api.get('/tambah/barang');
     let dataBarang = Array.isArray(res.data)
@@ -48,10 +47,14 @@ const TransaksiStyled = () => {
     // Parse harga jadi integer dan pastikan tidak NaN
     dataBarang = dataBarang.map(item => ({
       ...item,
-      harga: parseInt(item.harga || item.harga_barang || 0, 10)
+      harga: parseInt(item.harga || item.harga_barang || 0, 10),
+      stok: parseInt(item.stok || item.stok_barang || 0, 10) // pastikan stok integer
     }));
 
-    console.log('Data barang dari API (parsed):', dataBarang);
+    // 🔹 Filter barang yang stoknya > 0
+    dataBarang = dataBarang.filter(item => item.stok > 0);
+
+    console.log('Data barang dari API (stok > 0):', dataBarang);
 
     setBarangList(dataBarang);
 
@@ -65,6 +68,36 @@ const TransaksiStyled = () => {
     setBarangList([]);
   }
 };
+
+//  const fetchBarang = async () => {
+//   try {
+//     const res = await api.get('/tambah/barang');
+//     let dataBarang = Array.isArray(res.data)
+//       ? res.data
+//       : Array.isArray(res.data.data)
+//       ? res.data.data
+//       : [];
+
+//     // Parse harga jadi integer dan pastikan tidak NaN
+//     dataBarang = dataBarang.map(item => ({
+//       ...item,
+//       harga: parseInt(item.harga || item.harga_barang || 0, 10)
+//     }));
+
+//     console.log('Data barang dari API (parsed):', dataBarang);
+
+//     setBarangList(dataBarang);
+
+//     Animated.timing(fadeAnim, {
+//       toValue: 1,
+//       duration: 800,
+//       useNativeDriver: true,
+//     }).start();
+//   } catch (err) {
+//     console.error('Error fetching barang:', err.response?.data || err.message);
+//     setBarangList([]);
+//   }
+// };
 
   const fetchKategori = async () => {
     try {
