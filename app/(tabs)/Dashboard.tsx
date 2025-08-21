@@ -46,71 +46,144 @@ const Dashboard = () => {
   const [selectedTrx, setSelectedTrx] = useState<Transaction | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  
   const fetchHistory = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/history', {
-        headers: {
-          Authorization: `Bearer ${userInfo?.token}`,
-        },
-      });
+  try {
+    setLoading(true);
+    const res = await api.get('/history', {
+      headers: {
+        Authorization: `Bearer ${userInfo?.token}`,
+      },
+    });
 
-      console.log("DATA HISTORY:", res.data);
+    console.log("DATA HISTORY:", res.data);
 
-      const mapped = res.data.data.map((item: any) => ({
-        id: item.id,
-        kasir: item.nama_kasir,
-        kode: item.kode_transaksi,
-        metode: item.metode_pembayaran,
-        amount: Number(item.total_transaksi) || 0,
-        date: new Date(item.created_at).toLocaleDateString("id-ID"),
-        time: new Date(item.created_at).toLocaleTimeString("id-ID"),
-        created_at: item.created_at, // tambahkan created_at untuk perhitungan
-        barang: (item.details || []).map((d: any) => ({
-          nama: d.barang?.nama_barang || "-",
-          qty: d.jumlah,
-          harga: Number(d.harga_satuan) || 0,
-          subtotal: Number(d.total_harga) || 0,
-        })),
-      }));
+    const mapped = res.data.data.map((item: any) => ({
+      id: item.id,
+      kasir: item.nama_kasir,
+      kode: item.kode_transaksi,
+      metode: item.metode_pembayaran,
+      amount: Number(item.total_transaksi) || 0,
+      date: new Date(item.created_at).toLocaleDateString("id-ID"),
+      time: new Date(item.created_at).toLocaleTimeString("id-ID"),
+      created_at: item.created_at,
+      barang: (item.details || []).map((d: any) => ({
+        nama: d.barang?.nama_barang || "-",
+        qty: d.jumlah,
+        harga: Number(d.harga_satuan) || 0,
+        subtotal: Number(d.total_harga) || 0,
+      })),
+    }));
 
-      setSalesHistory(mapped);
+    setSalesHistory(mapped);
 
-      // Hitung penjualan hari ini
-      const today = new Date();
-      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    // Hitung penjualan hari ini
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    
+    const todayTotal = mapped
+      .filter((item: any) => {
+        const itemDate = new Date(item.created_at);
+        return itemDate >= todayStart && itemDate <= todayEnd;
+      })
+      .reduce((sum: number, item: any) => sum + item.amount, 0);
+    
+    setTodaySales(todayTotal);
+
+    // Hitung penjualan bulan ini
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+    
+    const monthlyTotal = mapped
+      .filter((item: any) => {
+        const itemDate = new Date(item.created_at);
+        return itemDate >= monthStart && itemDate <= monthEnd;
+      })
+      .reduce((sum: number, item: any) => sum + item.amount, 0);
+    
+    setMonthlySales(monthlyTotal);
+
+    // Hitung total produk terjual dari semua transaksi
+    const totalProductsSold = mapped.reduce((sum: number, transaction: any) => {
+      const transactionTotal = transaction.barang.reduce((itemSum: number, item: any) => {
+        return itemSum + (item.qty || 0);
+      }, 0);
+      return sum + transactionTotal;
+    }, 0);
+
+    setTotalProducts(totalProductsSold);
+
+  } catch (err) {
+    console.error("Gagal memuat history:", err);
+    Alert.alert('Gagal memuat history');
+  } finally {
+    setLoading(false);
+  }
+};
+  // const fetchHistory = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const res = await api.get('/history', {
+  //       headers: {
+  //         Authorization: `Bearer ${userInfo?.token}`,
+  //       },
+  //     });
+
+  //     console.log("DATA HISTORY:", res.data);
+
+  //     const mapped = res.data.data.map((item: any) => ({
+  //       id: item.id,
+  //       kasir: item.nama_kasir,
+  //       kode: item.kode_transaksi,
+  //       metode: item.metode_pembayaran,
+  //       amount: Number(item.total_transaksi) || 0,
+  //       date: new Date(item.created_at).toLocaleDateString("id-ID"),
+  //       time: new Date(item.created_at).toLocaleTimeString("id-ID"),
+  //       created_at: item.created_at, // tambahkan created_at untuk perhitungan
+  //       barang: (item.details || []).map((d: any) => ({
+  //         nama: d.barang?.nama_barang || "-",
+  //         qty: d.jumlah,
+  //         harga: Number(d.harga_satuan) || 0,
+  //         subtotal: Number(d.total_harga) || 0,
+  //       })),
+  //     }));
+
+  //     setSalesHistory(mapped);
+
+  //     // Hitung penjualan hari ini
+  //     const today = new Date();
+  //     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  //     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
       
-      const todayTotal = mapped
-        .filter((item: any) => {
-          const itemDate = new Date(item.created_at);
-          return itemDate >= todayStart && itemDate <= todayEnd;
-        })
-        .reduce((sum: number, item: any) => sum + item.amount, 0);
+  //     const todayTotal = mapped
+  //       .filter((item: any) => {
+  //         const itemDate = new Date(item.created_at);
+  //         return itemDate >= todayStart && itemDate <= todayEnd;
+  //       })
+  //       .reduce((sum: number, item: any) => sum + item.amount, 0);
       
-      setTodaySales(todayTotal);
+  //     setTodaySales(todayTotal);
 
-      // Hitung penjualan bulan ini
-      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+  //     // Hitung penjualan bulan ini
+  //     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  //     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
       
-      const monthlyTotal = mapped
-        .filter((item: any) => {
-          const itemDate = new Date(item.created_at);
-          return itemDate >= monthStart && itemDate <= monthEnd;
-        })
-        .reduce((sum: number, item: any) => sum + item.amount, 0);
+  //     const monthlyTotal = mapped
+  //       .filter((item: any) => {
+  //         const itemDate = new Date(item.created_at);
+  //         return itemDate >= monthStart && itemDate <= monthEnd;
+  //       })
+  //       .reduce((sum: number, item: any) => sum + item.amount, 0);
       
-      setMonthlySales(monthlyTotal);
+  //     setMonthlySales(monthlyTotal);
 
-    } catch (err) {
-      console.error("Gagal memuat history:", err);
-      Alert.alert('Gagal memuat history');
-    } finally {
-      setLoading(false);
-    }
-  };
+  //   } catch (err) {
+  //     console.error("Gagal memuat history:", err);
+  //     Alert.alert('Gagal memuat history');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   useEffect(() => {
     fetchHistory();
@@ -121,7 +194,7 @@ const Dashboard = () => {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.welcomeText}>
-          Halo, {userInfo?.user?.name || "User"}! 👋
+          Halo, {userInfo?.user?.name || "Admin"}! 👋
         </Text>
         <Text style={styles.subtitle}>Dashboard Penjualan</Text>
       </View>
@@ -158,7 +231,7 @@ const Dashboard = () => {
               <View style={styles.cardIcon}>
                 <Text style={styles.iconText}>📦</Text>
               </View>
-              <Text style={styles.summaryTitle}>Total Produk</Text>
+              <Text style={styles.summaryTitle}>Total Produk Terjual</Text>
               <Text style={styles.summaryValue}>{totalProducts}</Text>
             </View>
 
@@ -218,7 +291,7 @@ const Dashboard = () => {
                       <Text style={styles.historyAmount}>
                         {formatRupiah(transaction.amount)}
                       </Text>
-                      <Text style={styles.tapToView}>Tap untuk detail</Text>
+                      <Text style={styles.tapToView}>Lihat Detail →</Text>
                     </View>
                   </TouchableOpacity>
                 ))}

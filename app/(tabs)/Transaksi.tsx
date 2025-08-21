@@ -170,35 +170,36 @@ const removeFromCart = (itemId) => {
     setShowPaymentModal(true);
   };
 
-const finalizePayment = async () => {
-
+  const finalizePayment = async () => {
   const userData = await AsyncStorage.getItem('User');
   const user = userData ? JSON.parse(userData) : null;
   console.log("user : ", user);
 
   try {
     console.log("Cart : ", cart)
-    // Siapkan data transaksi
-   const transactionData = {
-  nama_kasir: user.name, // Ambil dari context/login user
-  items: cart.map(item => ({
-    id: item.id,
-    name: item.nama_barang,
-    price: item.price,
-    quantity: item.quantity,
-    subtotal: item.price * item.quantity
-  })),
-  total: totalAmount,
-  payment: {
-    method: paymentData.paymentMethod,
-    cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
-    change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
-  },
-  timestamp: new Date().toISOString()
-};
-
+    
+    // Siapkan data transaksi dengan field metode_pembayaran yang eksplisit
+    const transactionData = {
+      nama_kasir: user.name,
+      metode_pembayaran: paymentData.paymentMethod, // ← Tambahkan field ini
+      items: cart.map(item => ({
+        id: item.id,
+        name: item.nama_barang,
+        price: item.price,
+        quantity: item.quantity,
+        subtotal: item.price * item.quantity
+      })),
+      total: totalAmount,
+      payment: {
+        method: paymentData.paymentMethod,
+        cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
+        change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
+      },
+      timestamp: new Date().toISOString()
+    };
 
     console.log('📦 Mengirim transaksi:', transactionData);
+    console.log('🔍 Metode pembayaran yang dipilih:', paymentData.paymentMethod);
 
     // Kirim ke backend Laravel
     const res = await api.post('/transaksi', transactionData);
@@ -213,12 +214,61 @@ const finalizePayment = async () => {
       cashReceived: 0
     });
 
-    alert(`✅ Transaksi berhasil disimpan!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}`);
+    alert(`✅ Transaksi berhasil disimpan!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}\nMetode: ${paymentData.paymentMethod}`);
   } catch (err) {
     console.error('❌ Gagal menyimpan transaksi:', err.response?.data || err.message);
     alert('❌ Transaksi gagal disimpan! Cek koneksi atau server.');
   }
 };
+// const finalizePayment = async () => {
+
+//   const userData = await AsyncStorage.getItem('User');
+//   const user = userData ? JSON.parse(userData) : null;
+//   console.log("user : ", user);
+
+//   try {
+//     console.log("Cart : ", cart)
+//     // Siapkan data transaksi
+//    const transactionData = {
+//   nama_kasir: user.name, // Ambil dari context/login user
+//   items: cart.map(item => ({
+//     id: item.id,
+//     name: item.nama_barang,
+//     price: item.price,
+//     quantity: item.quantity,
+//     subtotal: item.price * item.quantity
+//   })),
+//   total: totalAmount,
+//   payment: {
+//     method: paymentData.paymentMethod,
+//     cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
+//     change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
+//   },
+//   timestamp: new Date().toISOString()
+// };
+
+
+//     console.log('📦 Mengirim transaksi:', transactionData);
+
+//     // Kirim ke backend Laravel
+//     const res = await api.post('/transaksi', transactionData);
+//     console.log('✅ Respon Laravel:', res.data);
+
+//     // Reset cart & form pembayaran
+//     setCart([]);
+//     setTotalAmount(0);
+//     setShowPaymentModal(false);
+//     setPaymentData({
+//       paymentMethod: 'cash',
+//       cashReceived: 0
+//     });
+
+//     alert(`✅ Transaksi berhasil disimpan!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}`);
+//   } catch (err) {
+//     console.error('❌ Gagal menyimpan transaksi:', err.response?.data || err.message);
+//     alert('❌ Transaksi gagal disimpan! Cek koneksi atau server.');
+//   }
+// };
 
   useEffect(() => {
     fetchBarang();
@@ -517,7 +567,7 @@ const finalizePayment = async () => {
               <View style={styles.formSection}>
                 <Text style={styles.sectionTitle}>Metode Pembayaran</Text>
                 <View style={styles.paymentMethods}>
-                  {['cash', 'digital'].map((method) => (
+                  {['Tunai', 'Debit'].map((method) => (
                     <TouchableOpacity
                       key={method}
                       style={[
@@ -530,7 +580,7 @@ const finalizePayment = async () => {
                         styles.paymentMethodText,
                         paymentData.paymentMethod === method && styles.paymentMethodTextActive
                       ]}>
-                        {method === 'cash' ? '💵 Cash' : '💳 Digital'}
+                        {method === 'Tunai' ? '💵 Tunai' : '💳 Debit'}
                       </Text>
                     </TouchableOpacity>
                   ))}

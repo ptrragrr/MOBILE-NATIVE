@@ -90,6 +90,7 @@ export default function ProfilePage() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
+      // mediaTypes: [ImagePicker.MediaType.Image],
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
@@ -104,39 +105,77 @@ export default function ProfilePage() {
 
   // Simpan profil ke backend
   const handleSaveProfile = async () => {
-    try {
-      const formData = new FormData();
-      formData.append('name', editedData.name);
-      formData.append('email', editedData.email);
-      formData.append('phone', editedData.phone);
+  try {
+    const formData = new FormData();
+    formData.append('name', editedData.name);
+    formData.append('email', editedData.email);
+    formData.append('phone', editedData.phone);
 
-      if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
-        const filename = editedData.profilePhoto.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image`;
+    // ✅ cek kalau ada foto baru (local file, bukan URL dari server)
+    if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
+      const uri = editedData.profilePhoto;
+      const filename = uri.split('/').pop() || `photo.jpg`;
+      const ext = filename.split('.').pop();
+      let type = `image/${ext}`;
+      if (ext === 'jpg') type = 'image/jpeg'; // ✅ fix mime type
 
-        formData.append('profile_photo', {
-          uri: editedData.profilePhoto,
-          name: filename,
-          type
-        });
-      }
-
-      await api.post('/auth/update-profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        }
+      formData.append('profile_photo', {
+        uri,
+        name: filename,
+        type,
       });
-
-      setUserData(editedData);
-      setIsEditing(false);
-      Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
-    } catch (err) {
-      console.error('Gagal update profil:', err.response?.data || err.message);
-      Alert.alert('Error', 'Gagal memperbarui profil');
     }
-  };
+
+    const res = await api.post('/auth/update-profile', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setUserData(res.data.user); // ✅ ambil user terbaru dari backend
+    setIsEditing(false);
+    Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
+  } catch (err) {
+    console.error('Gagal update profil:', err.response?.data || err.message);
+    Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
+  }
+};
+
+  // const handleSaveProfile = async () => {
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append('name', editedData.name);
+  //     formData.append('email', editedData.email);
+  //     formData.append('phone', editedData.phone);
+
+  //     if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
+  //       const filename = editedData.profilePhoto.split('/').pop();
+  //       const match = /\.(\w+)$/.exec(filename);
+  //       const type = match ? `image/${match[1]}` : `image`;
+
+  //       formData.append('profile_photo', {
+  //         uri: editedData.profilePhoto,
+  //         name: filename,
+  //         type
+  //       });
+  //     }
+
+  //     await api.post('/auth/update-profile', formData, {
+  //       headers: {
+  //         'Content-Type': 'multipart/form-data',
+  //         Authorization: `Bearer ${token}`,
+  //       }
+  //     });
+
+  //     setUserData(editedData);
+  //     setIsEditing(false);
+  //     Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
+  //   } catch (err) {
+  //     console.error('Gagal update profil:', err.response?.data || err.message);
+  //     Alert.alert('Error', 'Gagal memperbarui profil');
+  //   }
+  // };
 
   const handleCancelEdit = () => {
     setEditedData(userData);
