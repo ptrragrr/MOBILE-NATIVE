@@ -446,7 +446,7 @@ const finalizePayment = async () => {
                     source={{
                       uri: item.foto_barang?.startsWith('http')
                         ? item.foto_barang
-                        : ` https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}`,
+                        : `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}`,
                     }}
                     style={styles.cartItemImage}
                     onError={() => console.log('Image failed to load')}

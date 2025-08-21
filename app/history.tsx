@@ -70,10 +70,12 @@ export default function HistoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.safe}>
-        <StatusBar barStyle="dark-content" backgroundColor="#f5f7fa" />
+        <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color="#4a90e2" />
-          <Text style={{ marginTop: 8, color: "#2c3e50" }}>Memuat riwayat...</Text>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color="#3b82f6" />
+            <Text style={styles.loadingText}>Memuat riwayat transaksi...</Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -82,85 +84,164 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backWrap}>
-          <Text style={styles.backBtn}>⬅</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>Riwayat Transaksi</Text>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backIcon}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Riwayat Transaksi</Text>
+            <Text style={styles.headerSubtitle}>Kelola semua transaksi Anda</Text>
+          </View>
+        </View>
       </View>
 
-      {/* LIST */}
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        {salesHistory.length === 0 ? (
-          <Text style={styles.empty}>Belum ada transaksi</Text>
-        ) : (
-          salesHistory.map((trx) => (
-            <TouchableOpacity
-              key={trx.id}
-              style={styles.card}
-              onPress={() => {
-                setSelectedTrx(trx);
-                setShowModal(true);
-              }}
-            >
-              <View style={styles.row}>
-                <Text style={styles.kasir}>{trx.kasir}</Text>
-                <Text style={styles.amount}>{formatRupiah(trx.amount)}</Text>
+      {/* CONTENT */}
+      <View style={styles.container}>
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {salesHistory.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIcon}>
+                <Text style={styles.emptyIconText}>📋</Text>
               </View>
-              <Text style={styles.date}>
-                {trx.date} • {trx.time}
+              <Text style={styles.emptyTitle}>Belum Ada Transaksi</Text>
+              <Text style={styles.emptySubtitle}>
+                Transaksi yang Anda buat akan muncul di sini
               </Text>
-            </TouchableOpacity>
-          ))
-        )}
-      </ScrollView>
+            </View>
+          ) : (
+            <View style={styles.historyList}>
+              {salesHistory.map((trx) => (
+                <TouchableOpacity
+                  key={trx.id}
+                  style={styles.transactionCard}
+                  onPress={() => {
+                    setSelectedTrx(trx);
+                    setShowModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={styles.avatarContainer}>
+                      <Text style={styles.avatarText}>
+                        {trx.kasir.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.kasirName}>{trx.kasir}</Text>
+                      <Text style={styles.transactionDate}>
+                        {trx.date} • {trx.time}
+                      </Text>
+                    </View>
+                    <View style={styles.amountContainer}>
+                      <Text style={styles.amount}>{formatRupiah(trx.amount)}</Text>
+                      <Text style={styles.viewDetail}>Lihat Detail →</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      </View>
 
       {/* MODAL DETAIL */}
       <Modal visible={showModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Detail Transaksi</Text>
-            {selectedTrx && (
-              <ScrollView>
-                <Text>Kode: {selectedTrx.kode}</Text>
-                <Text>Kasir: {selectedTrx.kasir}</Text>
-                <Text>Metode: {selectedTrx.metode}</Text>
-                <Text>
-                  Tanggal: {selectedTrx.date} • {selectedTrx.time}
-                </Text>
-
-                <Text style={{ marginTop: 10, fontWeight: "bold" }}>
-                  Daftar Barang:
-                </Text>
-                {selectedTrx.barang.map((b: any, i: number) => (
-                  <View key={i} style={styles.itemRow}>
-                    <Text>
-                      {b.nama} x{b.qty}
-                    </Text>
-                    <Text>{formatRupiah(b.subtotal)}</Text>
-                  </View>
-                ))}
-                <View
-                  style={{
-                    borderTopWidth: 1,
-                    borderColor: "#ddd",
-                    marginTop: 10,
-                    paddingTop: 10,
-                  }}
+          <View style={styles.modalContainer}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderContent}>
+                <Text style={styles.modalTitle}>Detail Transaksi</Text>
+                <TouchableOpacity
+                  onPress={() => setShowModal(false)}
+                  style={styles.modalCloseButton}
                 >
-                  <Text style={{ fontWeight: "bold", fontSize: 16 }}>
-                    Total: {formatRupiah(selectedTrx.amount)}
-                  </Text>
+                  <Text style={styles.modalCloseText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Modal Content */}
+            {selectedTrx && (
+              <ScrollView 
+                style={styles.modalContent} 
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Transaction Info */}
+                <View style={styles.transactionInfo}>
+                  <View style={styles.infoCard}>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Kode Transaksi</Text>
+                      <Text style={styles.infoValue}>{selectedTrx.kode}</Text>
+                    </View>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Kasir</Text>
+                      <Text style={styles.infoValue}>{selectedTrx.kasir}</Text>
+                    </View>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Metode Pembayaran</Text>
+                      <View style={styles.methodBadge}>
+                        <Text style={styles.methodText}>{selectedTrx.metode}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Tanggal & Waktu</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedTrx.date} • {selectedTrx.time}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Items List */}
+                <View style={styles.itemsSection}>
+                  <Text style={styles.sectionTitle}>Daftar Barang</Text>
+                  <View style={styles.itemsCard}>
+                    {selectedTrx.barang.map((b: any, i: number) => (
+                      <View key={i} style={styles.itemContainer}>
+                        <View style={styles.itemDetails}>
+                          <Text style={styles.itemName}>{b.nama}</Text>
+                          <Text style={styles.itemQuantity}>Qty: {b.qty}</Text>
+                        </View>
+                        <Text style={styles.itemPrice}>{formatRupiah(b.subtotal)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+
+                {/* Total */}
+                <View style={styles.totalSection}>
+                  <View style={styles.totalCard}>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Total Pembayaran</Text>
+                      <Text style={styles.totalAmount}>
+                        {formatRupiah(selectedTrx.amount)}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </ScrollView>
             )}
-            <TouchableOpacity
-              onPress={() => setShowModal(false)}
-              style={styles.closeBtn}
-            >
-              <Text style={{ color: "#fff" }}>Tutup</Text>
-            </TouchableOpacity>
+
+            {/* Modal Footer */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                onPress={() => setShowModal(false)}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>Tutup</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -169,72 +250,362 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#f5f7fa" },
-  scroll: { paddingHorizontal: 16, paddingTop: 10 },
-  loading: { flex: 1, justifyContent: "center", alignItems: "center" },
+  safe: { 
+    flex: 1, 
+    backgroundColor: "#f8fafc" 
+  },
+  
+  // Loading Styles
+  loading: { 
+    flex: 1, 
+    justifyContent: "center", 
+    alignItems: "center",
+    paddingHorizontal: 20
+  },
+  loadingCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  loadingText: { 
+    marginTop: 16, 
+    color: "#64748b", 
+    fontSize: 16,
+    fontWeight: "500"
+  },
 
+  // Header Styles
   header: {
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    paddingVertical: 30,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e5e5e5",
+    paddingVertical: 16,
+    paddingTop: 50,
   },
-  backWrap: {
-    marginRight: 12,
-    backgroundColor: "#eaf2ff",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
-  backBtn: { fontSize: 18, color: "#4a90e2" },
-  title: { fontSize: 18, fontWeight: "700", color: "#2c3e50" },
+  backIcon: { 
+    fontSize: 20, 
+    color: "#3b82f6",
+    fontWeight: "600"
+  },
+  headerTitleContainer: {
+    flex: 1,
+  },
+  headerTitle: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#1e293b",
+    marginBottom: 2
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "400"
+  },
 
-  empty: { textAlign: "center", marginTop: 40, color: "#7f8c8d", fontSize: 15 },
+  // Container Styles
+  container: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingVertical: 20,
+  },
 
-  card: {
+  // Empty State
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  emptyIconText: {
+    fontSize: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+
+  // History List
+  historyList: {
+    gap: 12,
+  },
+  transactionCard: {
     backgroundColor: "#fff",
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
   },
-  row: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-  kasir: { fontSize: 16, fontWeight: "600", color: "#34495e" },
-  amount: { fontSize: 16, fontWeight: "700", color: "#27ae60" },
-  date: { fontSize: 13, color: "#7f8c8d" },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#3b82f6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  avatarText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  kasirName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 4,
+  },
+  transactionDate: {
+    fontSize: 13,
+    color: "#64748b",
+  },
+  amountContainer: {
+    alignItems: "flex-end",
+  },
+  amount: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#059669",
+    marginBottom: 2,
+  },
+  viewDetail: {
+    fontSize: 12,
+    color: "#3b82f6",
+    fontWeight: "500",
+  },
 
-  // Modal
+  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    minHeight: "60%",
+  },
+  modalHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  modalHeaderContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1e293b",
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
   },
-  modalContent: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
-    width: "85%",
-    maxHeight: "80%",
+  modalCloseText: {
+    fontSize: 16,
+    color: "#64748b",
   },
-  modalTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-  itemRow: {
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+
+  // Transaction Info
+  transactionInfo: {
+    marginTop: 20,
+    marginBottom: 24,
+  },
+  infoCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 16,
+  },
+  infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginVertical: 4,
-  },
-  closeBtn: {
-    marginTop: 16,
-    backgroundColor: "#4a90e2",
-    padding: 12,
-    borderRadius: 8,
     alignItems: "center",
+    paddingVertical: 12,
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: "#64748b",
+    fontWeight: "500",
+  },
+  infoValue: {
+    fontSize: 14,
+    color: "#1e293b",
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "right",
+  },
+  methodBadge: {
+    backgroundColor: "#dbeafe",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  methodText: {
+    fontSize: 12,
+    color: "#1d4ed8",
+    fontWeight: "600",
+  },
+
+  // Items Section
+  itemsSection: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 12,
+  },
+  itemsCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  itemContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  itemDetails: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 14,
+    color: "#1e293b",
+    fontWeight: "500",
+    marginBottom: 4,
+  },
+  itemQuantity: {
+    fontSize: 12,
+    color: "#64748b",
+  },
+  itemPrice: {
+    fontSize: 14,
+    color: "#059669",
+    fontWeight: "600",
+  },
+
+  // Total Section
+  totalSection: {
+    marginBottom: 20,
+  },
+  totalCard: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#166534",
+  },
+  totalAmount: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#166534",
+  },
+
+  // Modal Footer
+  modalFooter: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    paddingBottom: 30,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+  },
+  closeButton: {
+    backgroundColor: "#3b82f6",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  closeButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
