@@ -29,75 +29,44 @@ const TransaksiStyled = () => {
   const [totalAmount, setTotalAmount] = useState(0);
   const [showCartModal, setShowCartModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState(null);
   const [paymentData, setPaymentData] = useState({
-    paymentMethod: 'cash',
+    paymentMethod: 'Tunai',
     cashReceived: 0
   });
 
-  
-const fetchBarang = async () => {
-  try {
-    const res = await api.get('/tambah/barang');
-    let dataBarang = Array.isArray(res.data)
-      ? res.data
-      : Array.isArray(res.data.data)
-      ? res.data.data
-      : [];
+  const fetchBarang = async () => {
+    try {
+      const res = await api.get('/tambah/barang');
+      let dataBarang = Array.isArray(res.data)
+        ? res.data
+        : Array.isArray(res.data.data)
+        ? res.data.data
+        : [];
 
-    // Parse harga jadi integer dan pastikan tidak NaN
-    dataBarang = dataBarang.map(item => ({
-      ...item,
-      harga: parseInt(item.harga || item.harga_barang || 0, 10),
-      stok: parseInt(item.stok || item.stok_barang || 0, 10) // pastikan stok integer
-    }));
+      dataBarang = dataBarang.map(item => ({
+        ...item,
+        harga: parseInt(item.harga || item.harga_barang || 0, 10),
+        stok: parseInt(item.stok || item.stok_barang || 0, 10)
+      }));
 
-    // 🔹 Filter barang yang stoknya > 0
-    dataBarang = dataBarang.filter(item => item.stok > 0);
+      dataBarang = dataBarang.filter(item => item.stok > 0);
 
-    console.log('Data barang dari API (stok > 0):', dataBarang);
+      console.log('Data barang dari API (stok > 0):', dataBarang);
 
-    setBarangList(dataBarang);
+      setBarangList(dataBarang);
 
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 800,
-      useNativeDriver: true,
-    }).start();
-  } catch (err) {
-    console.error('Error fetching barang:', err.response?.data || err.message);
-    setBarangList([]);
-  }
-};
-
-//  const fetchBarang = async () => {
-//   try {
-//     const res = await api.get('/tambah/barang');
-//     let dataBarang = Array.isArray(res.data)
-//       ? res.data
-//       : Array.isArray(res.data.data)
-//       ? res.data.data
-//       : [];
-
-//     // Parse harga jadi integer dan pastikan tidak NaN
-//     dataBarang = dataBarang.map(item => ({
-//       ...item,
-//       harga: parseInt(item.harga || item.harga_barang || 0, 10)
-//     }));
-
-//     console.log('Data barang dari API (parsed):', dataBarang);
-
-//     setBarangList(dataBarang);
-
-//     Animated.timing(fadeAnim, {
-//       toValue: 1,
-//       duration: 800,
-//       useNativeDriver: true,
-//     }).start();
-//   } catch (err) {
-//     console.error('Error fetching barang:', err.response?.data || err.message);
-//     setBarangList([]);
-//   }
-// };
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+    } catch (err) {
+      console.error('Error fetching barang:', err.response?.data || err.message);
+      setBarangList([]);
+    }
+  };
 
   const fetchKategori = async () => {
     try {
@@ -122,42 +91,40 @@ const fetchBarang = async () => {
     return matchCategory && matchSearch;
   });
 
-const addToCart = (item) => {
-  // Ambil harga asli dari barangList yang sudah diparse
-  const barangAsli = barangList.find(b => b.id === item.id);
-  const hargaAsli = barangAsli ? barangAsli.harga : 0;
+  const addToCart = (item) => {
+    const barangAsli = barangList.find(b => b.id === item.id);
+    const hargaAsli = barangAsli ? barangAsli.harga : 0;
 
-  const existingItem = cart.find(cartItem => cartItem.id === item.id);
-  
-  if (existingItem) {
-    setCart(cart.map(cartItem => 
-      cartItem.id === item.id 
-        ? { ...cartItem, quantity: cartItem.quantity + 1 }
-        : cartItem
-    ));
-  } else {
-    setCart([...cart, { ...item, quantity: 1, price: hargaAsli }]);
-  }
-
-  setTotalAmount(totalAmount + hargaAsli);
-};
-
-const removeFromCart = (itemId) => {
-  const item = cart.find(cartItem => cartItem.id === itemId);
-  if (item) {
-    if (item.quantity > 1) {
+    const existingItem = cart.find(cartItem => cartItem.id === item.id);
+    
+    if (existingItem) {
       setCart(cart.map(cartItem => 
-        cartItem.id === itemId 
-          ? { ...cartItem, quantity: cartItem.quantity - 1 }
+        cartItem.id === item.id 
+          ? { ...cartItem, quantity: cartItem.quantity + 1 }
           : cartItem
       ));
     } else {
-      setCart(cart.filter(cartItem => cartItem.id !== itemId));
+      setCart([...cart, { ...item, quantity: 1, price: hargaAsli }]);
     }
-    setTotalAmount(totalAmount - item.price);
-  }
-};
 
+    setTotalAmount(totalAmount + hargaAsli);
+  };
+
+  const removeFromCart = (itemId) => {
+    const item = cart.find(cartItem => cartItem.id === itemId);
+    if (item) {
+      if (item.quantity > 1) {
+        setCart(cart.map(cartItem => 
+          cartItem.id === itemId 
+            ? { ...cartItem, quantity: cartItem.quantity - 1 }
+            : cartItem
+        ));
+      } else {
+        setCart(cart.filter(cartItem => cartItem.id !== itemId));
+      }
+      setTotalAmount(totalAmount - item.price);
+    }
+  };
 
   const getItemQuantity = (itemId) => {
     const item = cart.find(cartItem => cartItem.id === itemId);
@@ -166,109 +133,72 @@ const removeFromCart = (itemId) => {
 
   const processTransaction = async () => {
     if (cart.length === 0) return;
-    
     setShowPaymentModal(true);
   };
 
   const finalizePayment = async () => {
-  const userData = await AsyncStorage.getItem('User');
-  const user = userData ? JSON.parse(userData) : null;
-  console.log("user : ", user);
+    const userData = await AsyncStorage.getItem('User');
+    const user = userData ? JSON.parse(userData) : null;
+    console.log("user : ", user);
 
-  try {
-    console.log("Cart : ", cart)
-    
-    // Siapkan data transaksi dengan field metode_pembayaran yang eksplisit
-    const transactionData = {
-      nama_kasir: user.name,
-      metode_pembayaran: paymentData.paymentMethod, // ← Tambahkan field ini
-      items: cart.map(item => ({
-        id: item.id,
-        name: item.nama_barang,
-        price: item.price,
-        quantity: item.quantity,
-        subtotal: item.price * item.quantity
-      })),
-      total: totalAmount,
-      payment: {
-        method: paymentData.paymentMethod,
-        cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
-        change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
-      },
-      timestamp: new Date().toISOString()
-    };
+    try {
+      console.log("Cart : ", cart);
+      
+      const transactionData = {
+        nama_kasir: user.name,
+        metode_pembayaran: paymentData.paymentMethod,
+        items: cart.map(item => ({
+          id: item.id,
+          name: item.nama_barang,
+          price: item.price,
+          quantity: item.quantity,
+          subtotal: item.price * item.quantity
+        })),
+        total: totalAmount,
+        payment: {
+          method: paymentData.paymentMethod,
+          cashReceived: paymentData.paymentMethod === 'Tunai' ? paymentData.cashReceived : totalAmount,
+          change: paymentData.paymentMethod === 'Tunai' ? paymentData.cashReceived - totalAmount : 0
+        },
+        timestamp: new Date().toISOString()
+      };
 
-    console.log('📦 Mengirim transaksi:', transactionData);
-    console.log('🔍 Metode pembayaran yang dipilih:', paymentData.paymentMethod);
+      console.log('📦 Mengirim transaksi:', transactionData);
 
-    // Kirim ke backend Laravel
-    const res = await api.post('/transaksi', transactionData);
-    console.log('✅ Respon Laravel:', res.data);
+      const res = await api.post('/transaksi', transactionData);
+      console.log('✅ Respon Laravel:', res.data);
 
-    // Reset cart & form pembayaran
-    setCart([]);
-    setTotalAmount(0);
-    setShowPaymentModal(false);
-    setPaymentData({
-      paymentMethod: 'cash',
-      cashReceived: 0
-    });
+      // Simpan data untuk struk
+      const receiptInfo = {
+        kodeTransaksi: res.data.kode_transaksi || `TRX-${Date.now()}`,
+        kasir: user.name,
+        tanggal: new Date().toLocaleDateString('id-ID'),
+        waktu: new Date().toLocaleTimeString('id-ID'),
+        items: cart,
+        subtotal: totalAmount,
+        total: totalAmount,
+        metodePembayaran: paymentData.paymentMethod,
+        uangTunai: paymentData.paymentMethod === 'Tunai' ? paymentData.cashReceived : totalAmount,
+        kembalian: paymentData.paymentMethod === 'Tunai' ? paymentData.cashReceived - totalAmount : 0
+      };
 
-    alert(`✅ Transaksi berhasil disimpan!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}\nMetode: ${paymentData.paymentMethod}`);
-  } catch (err) {
-    console.error('❌ Gagal menyimpan transaksi:', err.response?.data || err.message);
-    alert('❌ Transaksi gagal disimpan! Cek koneksi atau server.');
-  }
-};
-// const finalizePayment = async () => {
+      setReceiptData(receiptInfo);
+      setShowPaymentModal(false);
+      setShowReceiptModal(true);
 
-//   const userData = await AsyncStorage.getItem('User');
-//   const user = userData ? JSON.parse(userData) : null;
-//   console.log("user : ", user);
+      // Reset cart & form pembayaran
+      setCart([]);
+      setTotalAmount(0);
+      setPaymentData({
+        paymentMethod: 'Tunai',
+        cashReceived: 0
+      });
 
-//   try {
-//     console.log("Cart : ", cart)
-//     // Siapkan data transaksi
-//    const transactionData = {
-//   nama_kasir: user.name, // Ambil dari context/login user
-//   items: cart.map(item => ({
-//     id: item.id,
-//     name: item.nama_barang,
-//     price: item.price,
-//     quantity: item.quantity,
-//     subtotal: item.price * item.quantity
-//   })),
-//   total: totalAmount,
-//   payment: {
-//     method: paymentData.paymentMethod,
-//     cashReceived: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived : totalAmount,
-//     change: paymentData.paymentMethod === 'cash' ? paymentData.cashReceived - totalAmount : 0
-//   },
-//   timestamp: new Date().toISOString()
-// };
-
-
-//     console.log('📦 Mengirim transaksi:', transactionData);
-
-//     // Kirim ke backend Laravel
-//     const res = await api.post('/transaksi', transactionData);
-//     console.log('✅ Respon Laravel:', res.data);
-
-//     // Reset cart & form pembayaran
-//     setCart([]);
-//     setTotalAmount(0);
-//     setShowPaymentModal(false);
-//     setPaymentData({
-//       paymentMethod: 'cash',
-//       cashReceived: 0
-//     });
-
-//     alert(`✅ Transaksi berhasil disimpan!\nTotal: Rp ${totalAmount.toLocaleString('id-ID')}`);
-//   } catch (err) {
-//     console.error('❌ Gagal menyimpan transaksi:', err.response?.data || err.message);
-//     alert('❌ Transaksi gagal disimpan! Cek koneksi atau server.');
-//   }
-// };
+    } catch (err) {
+      console.error('❌ Gagal menyimpan transaksi:', err.response?.data || err.message);
+      alert('❌ Transaksi gagal disimpan! Cek koneksi atau server.');
+    }
+  };
 
   useEffect(() => {
     fetchBarang();
@@ -588,7 +518,7 @@ const removeFromCart = (itemId) => {
               </View>
 
               {/* Cash Payment */}
-              {paymentData.paymentMethod === 'cash' && (
+              {paymentData.paymentMethod === 'Tunai' && (
                 <View style={styles.formSection}>
                   <Text style={styles.sectionTitle}>Uang Tunai</Text>
                   <TextInput
@@ -600,10 +530,7 @@ const removeFromCart = (itemId) => {
                         : ''
                     }
                     onChangeText={(text) => {
-                      // Ambil hanya angka dari input
                       const numericValue = parseInt(text.replace(/[^0-9]/g, ''), 10) || 0;
-
-                      // Simpan nilai angka ke state (untuk perhitungan)
                       setPaymentData(prev => ({
                         ...prev,
                         cashReceived: numericValue
@@ -652,15 +579,161 @@ const removeFromCart = (itemId) => {
               <TouchableOpacity
                 style={[
                   styles.processPaymentButton,
-                  (paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount) && 
+                  (paymentData.paymentMethod === 'Tunai' && paymentData.cashReceived < totalAmount) && 
                   styles.disabledButton
                 ]}
                 onPress={finalizePayment}
-                disabled={paymentData.paymentMethod === 'cash' && paymentData.cashReceived < totalAmount}
+                disabled={paymentData.paymentMethod === 'Tunai' && paymentData.cashReceived < totalAmount}
               >
                 <Text style={styles.processPaymentText}>
                   Proses Pembayaran
                 </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Receipt Modal */}
+      <Modal
+        visible={showReceiptModal}
+        animationType="slide"
+        transparent={true}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.receiptModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Struk Belanja</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={() => setShowReceiptModal(false)}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {receiptData && (
+              <ScrollView style={styles.receiptContent} showsVerticalScrollIndicator={false}>
+                {/* Header Toko */}
+                <View style={styles.receiptHeader}>
+                  <Text style={styles.storeName}>TOKO SEMBAKO</Text>
+                  <Text style={styles.storeAddress}>Jl.Manukan</Text>
+                  <Text style={styles.storeContact}>Telp:0812-3456-7890</Text>
+                </View>
+
+                <View style={styles.receiptDivider} />
+
+                {/* Info Transaksi */}
+                <View style={styles.receiptInfo}>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>No. Transaksi</Text>
+                    <Text style={styles.receiptValue}>{receiptData.kodeTransaksi}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Kasir</Text>
+                    <Text style={styles.receiptValue}>{receiptData.kasir}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Tanggal</Text>
+                    <Text style={styles.receiptValue}>{receiptData.tanggal}</Text>
+                  </View>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Waktu</Text>
+                    <Text style={styles.receiptValue}>{receiptData.waktu}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.receiptDivider} />
+
+                {/* Daftar Barang */}
+                <View style={styles.itemsList}>
+                  <Text style={styles.itemsHeader}>DAFTAR BELANJA</Text>
+                  {receiptData.items.map((item, index) => (
+                    <View key={index} style={styles.receiptItem}>
+                      <View style={styles.itemNameRow}>
+                        <Text style={styles.itemName}>{item.nama_barang}</Text>
+                      </View>
+                      <View style={styles.itemDetailRow}>
+                        <Text style={styles.itemDetail}>
+                          {item.quantity} x Rp {item.price.toLocaleString('id-ID')}
+                        </Text>
+                        <Text style={styles.itemTotal}>
+                          Rp {(item.price * item.quantity).toLocaleString('id-ID')}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.receiptDivider} />
+
+                {/* Total */}
+                <View style={styles.receiptSummary}>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Subtotal</Text>
+                    <Text style={styles.receiptValue}>
+                      Rp {receiptData.subtotal.toLocaleString('id-ID')}
+                    </Text>
+                  </View>
+                  <View style={[styles.receiptRow, styles.totalRowReceipt]}>
+                    <Text style={styles.totalLabelReceipt}>TOTAL</Text>
+                    <Text style={styles.totalValueReceipt}>
+                      Rp {receiptData.total.toLocaleString('id-ID')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.receiptDivider} />
+
+                {/* Pembayaran */}
+                <View style={styles.receiptPayment}>
+                  <View style={styles.receiptRow}>
+                    <Text style={styles.receiptLabel}>Metode Pembayaran</Text>
+                    <Text style={styles.receiptValue}>{receiptData.metodePembayaran}</Text>
+                  </View>
+                  {receiptData.metodePembayaran === 'Tunai' && (
+                    <>
+                      <View style={styles.receiptRow}>
+                        <Text style={styles.receiptLabel}>Uang Tunai</Text>
+                        <Text style={styles.receiptValue}>
+                          Rp {receiptData.uangTunai.toLocaleString('id-ID')}
+                        </Text>
+                      </View>
+                      <View style={styles.receiptRow}>
+                        <Text style={styles.receiptLabel}>Kembalian</Text>
+                        <Text style={styles.receiptValue}>
+                          Rp {receiptData.kembalian.toLocaleString('id-ID')}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+
+                <View style={styles.receiptDivider} />
+
+                {/* Footer */}
+                <View style={styles.receiptFooter}>
+                  <Text style={styles.footerText}>Terima kasih atas kunjungan Anda!</Text>
+                  <Text style={styles.footerText}>Barang yang sudah dibeli tidak dapat dikembalikan</Text>
+                </View>
+              </ScrollView>
+            )}
+
+            {/* Action Buttons */}
+            <View style={styles.receiptActions}>
+              <TouchableOpacity
+                style={styles.shareButton}
+                onPress={() => {
+                  alert('Fitur share akan ditambahkan');
+                }}
+              >
+                <Text style={styles.shareButtonText}>Bagikan Struk</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.newTransactionButton}
+                onPress={() => setShowReceiptModal(false)}
+              >
+                <Text style={styles.newTransactionButtonText}>Selesai</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -671,6 +744,8 @@ const removeFromCart = (itemId) => {
 };
 
 export default TransaksiStyled;
+
+// Replace your entire StyleSheet.create() section with this corrected version:
 
 const styles = StyleSheet.create({
   container: {
@@ -965,6 +1040,13 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     paddingBottom: 20,
   },
+  receiptModalContainer: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    paddingBottom: 20,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1155,9 +1237,170 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#cccccc',
-  },                          
+  },
   processPaymentText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  // Receipt Modal Styles - FIXED VERSION
+  receiptContent: {
+    maxHeight: 500,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  receiptHeader: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  storeName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+    marginBottom: 4,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+  },
+  storeAddress: {
+    fontSize: 14,
+    color: '#000000',
+    marginBottom: 2,
+    textAlign: 'center',
+    flexWrap: 'wrap',
+    lineHeight: 18,
+  },
+  storeContact: {
+    fontSize: 14,
+    color: '#000000',
+  },
+  receiptDivider: {
+    height: 1,
+    backgroundColor: '#000000',
+    marginVertical: 16,
+  },
+  receiptInfo: {
+    paddingVertical: 8,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    minHeight: 24,
+  },
+  receiptLabel: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '500',
+    flex: 1,
+  },
+  receiptValue: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '600',
+    textAlign: 'right',
+    flex: 1,
+  },
+  itemsList: {
+    paddingVertical: 8,
+  },
+  itemsHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  receiptItem: {
+    marginBottom: 12,
+  },
+  itemNameRow: {
+    marginBottom: 4,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#333333',
+  },
+  itemDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemDetail: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  itemTotal: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  receiptSummary: {
+    paddingVertical: 12,
+  },
+  totalRowReceipt: {
+    paddingTop: 12,
+    paddingBottom: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#000000',
+    marginTop: 8,
+    minHeight: 32,
+  },
+  totalLabelReceipt: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    flex: 1,
+  },
+  totalValueReceipt: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+    textAlign: 'right',
+    flex: 1,
+  },
+  receiptPayment: {
+    paddingVertical: 12,
+  },
+  receiptFooter: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  receiptActions: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  shareButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  shareButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666666',
+  },
+  newTransactionButton: {
+    flex: 1,
+    backgroundColor: '#28a745',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  newTransactionButtonText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
   },
