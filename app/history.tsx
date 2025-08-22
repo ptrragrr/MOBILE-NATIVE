@@ -1,10 +1,11 @@
 // HistoryScreen.tsx
+import * as FileSystem from "expo-file-system";
 import * as Print from "expo-print";
 import { useRouter } from "expo-router";
-import * as Sharing from "expo-sharing";
 import React, { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -66,53 +67,157 @@ export default function HistoryScreen() {
   }, []);
 
   const handleDownloadPDF = async () => {
-    if (salesHistory.length === 0) return alert("Belum ada transaksi untuk dicetak.");
+  if (salesHistory.length === 0) {
+    return Alert.alert("Belum ada transaksi untuk dicetak.");
+  }
 
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-            th { background-color: #f0f0f0; }
-          </style>
-        </head>
-        <body>
-          <h1>Laporan Riwayat Transaksi</h1>
-          <table>
+  const html = `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; }
+          h1 { text-align: center; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          th { background-color: #f0f0f0; }
+        </style>
+      </head>
+      <body>
+        <h1>Laporan Riwayat Transaksi</h1>
+        <table>
+          <tr>
+            <th>Kode</th>
+            <th>Barang</th>
+            <th>Kasir</th>
+            <th>Metode</th>
+            <th>Total</th>
+            <th>Tanggal</th>
+          </tr>
+          ${salesHistory
+            .map(
+              (trx) => `
             <tr>
-              <th>Kode</th>
-              <th>Barang</th>
-              <th>Kasir</th>
-              <th>Metode</th>
-              <th>Total</th>
-              <th>Tanggal</th>
+              <td>${trx.kode}</td>
+              <td>${trx.barang
+                .map((b: any) => `${b.nama} (x${b.qty})`)
+                .join(", ")}</td>
+              <td>${trx.kasir}</td>
+              <td>${trx.metode}</td>
+              <td>${formatRupiah(trx.amount)}</td>
+              <td>${trx.date} ${trx.time}</td>
             </tr>
-            ${salesHistory.map(trx => `
-              <tr>
-                <td>${trx.kode}</td>
-                <td>${trx.barang.map(b => `${b.nama} (x${b.qty})`).join(", ")}</td>
-                <td>${trx.kasir}</td>
-                <td>${trx.metode}</td>
-                <td>${formatRupiah(trx.amount)}</td>
-                <td>${trx.date} ${trx.time}</td>
-              </tr>
-            `).join('')}
-          </table>
-        </body>
-      </html>
-    `;
-    
-    try {
-      const { uri } = await Print.printToFileAsync({ html });
-      await Sharing.shareAsync(uri, { UTI: ".pdf", mimeType: "application/pdf" });
-    } catch (err) {
-      console.error("Gagal cetak PDF:", err);
-      alert("Gagal mencetak PDF");
+          `
+            )
+            .join("")}
+        </table>
+      </body>
+    </html>
+  `;
+
+  try {
+    const { uri } = await Print.printToFileAsync({ html });
+    const fileName = `laporan-transaksi-${Date.now()}.pdf`;
+
+    // ✅ SAF: user pilih folder simpan
+    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+    if (!permissions.granted) {
+      return Alert.alert("Izin ditolak", "Tidak bisa simpan PDF tanpa izin folder.");
     }
-  };
+
+    const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+      permissions.directoryUri,
+      fileName,
+      "application/pdf"
+    );
+
+    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+    await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+    Alert.alert("Sukses", "PDF berhasil disimpan ✅");
+  } catch (err) {
+    console.error("Gagal cetak PDF:", err);
+    Alert.alert("Error", "Gagal mencetak PDF");
+  }
+};
+
+// const handleDownloadPDF = async () => {
+//   if (salesHistory.length === 0) {
+//     return Alert.alert("Belum ada transaksi untuk dicetak.");
+//   }
+
+//   const html = `
+//     <html>
+//       <head>
+//         <style>
+//           body { font-family: Arial, sans-serif; padding: 20px; }
+//           h1 { text-align: center; }
+//           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+//           th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+//           th { background-color: #f0f0f0; }
+//         </style>
+//       </head>
+//       <body>
+//         <h1>Laporan Riwayat Transaksi</h1>
+//         <table>
+//           <tr>
+//             <th>Kode</th>
+//             <th>Barang</th>
+//             <th>Kasir</th>
+//             <th>Metode</th>
+//             <th>Total</th>
+//             <th>Tanggal</th>
+//           </tr>
+//           ${salesHistory
+//             .map(
+//               (trx) => `
+//             <tr>
+//               <td>${trx.kode}</td>
+//               <td>${trx.barang
+//                 .map((b: any) => `${b.nama} (x${b.qty})`)
+//                 .join(", ")}</td>
+//               <td>${trx.kasir}</td>
+//               <td>${trx.metode}</td>
+//               <td>${formatRupiah(trx.amount)}</td>
+//               <td>${trx.date} ${trx.time}</td>
+//             </tr>
+//           `
+//             )
+//             .join("")}
+//         </table>
+//       </body>
+//     </html>
+//   `;
+
+//   try {
+//     const { uri } = await Print.printToFileAsync({ html });
+//     const fileName = `laporan-transaksi-${Date.now()}.pdf`;
+
+//     // ✅ Minta user pilih folder (misalnya Download)
+//     const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+//     if (!permissions.granted) {
+//       return Alert.alert("Izin ditolak", "Tidak bisa simpan PDF tanpa izin folder.");
+//     }
+
+//     // ✅ Buat file di folder yang dipilih user
+//     const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+//       permissions.directoryUri,
+//       fileName,
+//       "application/pdf"
+//     );
+
+//     // ✅ Tulis file dalam bentuk base64
+//     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+//     await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+
+//     Alert.alert("Sukses", "PDF berhasil disimpan di folder yang dipilih ✅");
+//   } catch (err) {
+//     console.error("Gagal cetak PDF:", err);
+//     Alert.alert("Error", "Gagal mencetak PDF");
+//   }
+// };
+
 
   if (loading) {
     return (
