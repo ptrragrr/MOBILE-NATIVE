@@ -1,11 +1,7 @@
-// HistoryScreen.tsx
-import * as FileSystem from "expo-file-system";
-import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import React, { useContext, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -30,7 +26,7 @@ export default function HistoryScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
-  const [selectedTrx, setSelectedTrx] = useState<any | null>(null);
+  const [selectedTrx, setSelectedTrx] = useState<any | null>(null); // transaksi dipilih
   const [showModal, setShowModal] = useState(false);
 
   const fetchHistory = async () => {
@@ -39,6 +35,9 @@ export default function HistoryScreen() {
       const res = await api.get("/history", {
         headers: { Authorization: `Bearer ${userInfo?.token}` },
       });
+
+      console.log("DATA HISTORY:", JSON.stringify(res.data.data[0], null, 2));
+
       const mapped = res.data.data.map((item: any) => ({
         id: item.id,
         kasir: item.nama_kasir,
@@ -48,176 +47,25 @@ export default function HistoryScreen() {
         date: new Date(item.created_at).toLocaleDateString("id-ID"),
         time: new Date(item.created_at).toLocaleTimeString("id-ID"),
         barang: (item.details || []).map((d: any) => ({
-          nama: d.barang?.nama_barang || "-",
-          qty: d.jumlah,
-          harga: Number(d.harga_satuan) || 0,
-          subtotal: Number(d.total_harga) || 0,
-        })),
+        nama: d.barang?.nama_barang || "-",
+        qty: d.jumlah,
+        harga: Number(d.harga_satuan) || 0,
+        subtotal: Number(d.total_harga) || 0,
+      })),
       }));
+      console.log("MAPPED HISTORY:", JSON.stringify(mapped, null, 2));
       setSalesHistory(mapped);
     } catch (err) {
       console.error("Gagal memuat history:", err);
     } finally {
       setLoading(false);
     }
+    
   };
 
   useEffect(() => {
     fetchHistory();
   }, []);
-
-  const handleDownloadPDF = async () => {
-  if (salesHistory.length === 0) {
-    return Alert.alert("Belum ada transaksi untuk dicetak.");
-  }
-
-  const html = `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h1 { text-align: center; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          th { background-color: #f0f0f0; }
-        </style>
-      </head>
-      <body>
-        <h1>Laporan Riwayat Transaksi</h1>
-        <table>
-          <tr>
-            <th>Kode</th>
-            <th>Barang</th>
-            <th>Kasir</th>
-            <th>Metode</th>
-            <th>Total</th>
-            <th>Tanggal</th>
-          </tr>
-          ${salesHistory
-            .map(
-              (trx) => `
-            <tr>
-              <td>${trx.kode}</td>
-              <td>${trx.barang
-                .map((b: any) => `${b.nama} (x${b.qty})`)
-                .join(", ")}</td>
-              <td>${trx.kasir}</td>
-              <td>${trx.metode}</td>
-              <td>${formatRupiah(trx.amount)}</td>
-              <td>${trx.date} ${trx.time}</td>
-            </tr>
-          `
-            )
-            .join("")}
-        </table>
-      </body>
-    </html>
-  `;
-
-  try {
-    const { uri } = await Print.printToFileAsync({ html });
-    const fileName = `laporan-transaksi-${Date.now()}.pdf`;
-
-    // ✅ SAF: user pilih folder simpan
-    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-
-    if (!permissions.granted) {
-      return Alert.alert("Izin ditolak", "Tidak bisa simpan PDF tanpa izin folder.");
-    }
-
-    const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-      permissions.directoryUri,
-      fileName,
-      "application/pdf"
-    );
-
-    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-    await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-
-    Alert.alert("Sukses", "PDF berhasil disimpan ✅");
-  } catch (err) {
-    console.error("Gagal cetak PDF:", err);
-    Alert.alert("Error", "Gagal mencetak PDF");
-  }
-};
-
-// const handleDownloadPDF = async () => {
-//   if (salesHistory.length === 0) {
-//     return Alert.alert("Belum ada transaksi untuk dicetak.");
-//   }
-
-//   const html = `
-//     <html>
-//       <head>
-//         <style>
-//           body { font-family: Arial, sans-serif; padding: 20px; }
-//           h1 { text-align: center; }
-//           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-//           th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-//           th { background-color: #f0f0f0; }
-//         </style>
-//       </head>
-//       <body>
-//         <h1>Laporan Riwayat Transaksi</h1>
-//         <table>
-//           <tr>
-//             <th>Kode</th>
-//             <th>Barang</th>
-//             <th>Kasir</th>
-//             <th>Metode</th>
-//             <th>Total</th>
-//             <th>Tanggal</th>
-//           </tr>
-//           ${salesHistory
-//             .map(
-//               (trx) => `
-//             <tr>
-//               <td>${trx.kode}</td>
-//               <td>${trx.barang
-//                 .map((b: any) => `${b.nama} (x${b.qty})`)
-//                 .join(", ")}</td>
-//               <td>${trx.kasir}</td>
-//               <td>${trx.metode}</td>
-//               <td>${formatRupiah(trx.amount)}</td>
-//               <td>${trx.date} ${trx.time}</td>
-//             </tr>
-//           `
-//             )
-//             .join("")}
-//         </table>
-//       </body>
-//     </html>
-//   `;
-
-//   try {
-//     const { uri } = await Print.printToFileAsync({ html });
-//     const fileName = `laporan-transaksi-${Date.now()}.pdf`;
-
-//     // ✅ Minta user pilih folder (misalnya Download)
-//     const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-
-//     if (!permissions.granted) {
-//       return Alert.alert("Izin ditolak", "Tidak bisa simpan PDF tanpa izin folder.");
-//     }
-
-//     // ✅ Buat file di folder yang dipilih user
-//     const fileUri = await FileSystem.StorageAccessFramework.createFileAsync(
-//       permissions.directoryUri,
-//       fileName,
-//       "application/pdf"
-//     );
-
-//     // ✅ Tulis file dalam bentuk base64
-//     const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-//     await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
-
-//     Alert.alert("Sukses", "PDF berhasil disimpan di folder yang dipilih ✅");
-//   } catch (err) {
-//     console.error("Gagal cetak PDF:", err);
-//     Alert.alert("Error", "Gagal mencetak PDF");
-//   }
-// };
-
 
   if (loading) {
     return (
@@ -247,9 +95,6 @@ export default function HistoryScreen() {
             <Text style={styles.headerTitle}>Riwayat Transaksi</Text>
             <Text style={styles.headerSubtitle}>Kelola semua transaksi Anda</Text>
           </View>
-          <TouchableOpacity onPress={handleDownloadPDF} style={styles.downloadButton}>
-            <Text style={styles.downloadButtonText}>PDF</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -323,8 +168,42 @@ export default function HistoryScreen() {
               </View>
             </View>
 
+            {/* Modal Content */}
             {selectedTrx && (
-              <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              <ScrollView 
+                style={styles.modalContent} 
+                showsVerticalScrollIndicator={false}
+              >
+                {/* Transaction Info */}
+                <View style={styles.transactionInfo}>
+                  <View style={styles.infoCard}>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Kode Transaksi</Text>
+                      <Text style={styles.infoValue}>{selectedTrx.kode}</Text>
+                    </View>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Kasir</Text>
+                      <Text style={styles.infoValue}>{selectedTrx.kasir}</Text>
+                    </View>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Metode Pembayaran</Text>
+                      <View style={styles.methodBadge}>
+                        <Text style={styles.methodText}>{selectedTrx.metode}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.infoDivider} />
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Tanggal & Waktu</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedTrx.date} • {selectedTrx.time}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Items List */}
                 <View style={styles.itemsSection}>
                   <Text style={styles.sectionTitle}>Daftar Barang</Text>
                   <View style={styles.itemsCard}>
@@ -339,9 +218,22 @@ export default function HistoryScreen() {
                     ))}
                   </View>
                 </View>
+
+                {/* Total */}
+                <View style={styles.totalSection}>
+                  <View style={styles.totalCard}>
+                    <View style={styles.totalRow}>
+                      <Text style={styles.totalLabel}>Total Pembayaran</Text>
+                      <Text style={styles.totalAmount}>
+                        {formatRupiah(selectedTrx.amount)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               </ScrollView>
             )}
 
+            {/* Modal Footer */}
             <View style={styles.modalFooter}>
               <TouchableOpacity
                 onPress={() => setShowModal(false)}
@@ -357,7 +249,6 @@ export default function HistoryScreen() {
   );
 }
 
-// style tetap sama seperti kode kamu sebelumnya
 const styles = StyleSheet.create({
   safe: { 
     flex: 1, 

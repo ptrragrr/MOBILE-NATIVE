@@ -722,7 +722,7 @@ const Transaksi: React.FC = () => {
                 <View style={styles.receiptHeader}>
                   <Text style={styles.storeName}>TOKO SEMBAKO</Text>
                   <Text style={styles.storeAddress}>Jl.Manukan</Text>
-                  <Text style={styles.storeContact}>Telp:0812-3456-7890</Text>
+                  <Text style={styles.storeContact}>Telp:123</Text>
                 </View>
 
                 <View style={styles.receiptDivider} />
