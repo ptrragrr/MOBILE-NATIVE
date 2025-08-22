@@ -81,14 +81,25 @@ const Dashboard = () => {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
     
-    const todayTotal = mapped
-      .filter((item: any) => {
-        const itemDate = new Date(item.created_at);
-        return itemDate >= todayStart && itemDate <= todayEnd;
-      })
-      .reduce((sum: number, item: any) => sum + item.amount, 0);
+    const todayStr = new Date().toLocaleDateString("id-ID");
+
+const todayTotal = mapped
+  .filter((item: any) => {
+    const itemDateStr = new Date(item.created_at).toLocaleDateString("id-ID");
+    return itemDateStr === todayStr;
+  })
+  .reduce((sum: number, item: any) => sum + item.amount, 0);
+
+setTodaySales(todayTotal);
+
+    // const todayTotal = mapped
+    //   .filter((item: any) => {
+    //     const itemDate = new Date(item.created_at);
+    //     return itemDate >= todayStart && itemDate <= todayEnd;
+    //   })
+    //   .reduce((sum: number, item: any) => sum + item.amount, 0);
     
-    setTodaySales(todayTotal);
+    // setTodaySales(todayTotal);
 
     // Hitung penjualan bulan ini
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);

@@ -714,7 +714,7 @@ const TransaksiStyled = () => {
                 {/* Footer */}
                 <View style={styles.receiptFooter}>
                   <Text style={styles.footerText}>Terima kasih atas kunjungan Anda!</Text>
-                  <Text style={styles.footerText}>Barang yang sudah dibeli tidak dapat dikembalikan</Text>
+                  {/* <Text style={styles.footerText}>Barang yang sudah dibeli tidak dapat dikembalikan</Text> */}
                 </View>
               </ScrollView>
             )}
