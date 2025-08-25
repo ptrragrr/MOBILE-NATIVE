@@ -105,25 +105,6 @@ const InventoryManagement = () => {
       fetchBarang();
     fetchKategori();
     }
-    // try {
-    //   if (editId) {
-    //     await api.post(`/tambah/barang/${editId}?_method=PUT`, formData, {
-    //       headers: { 'Content-Type': 'multipart/form-data' }
-    //     });
-    //     Alert.alert('Sukses', 'Barang berhasil diupdate!');
-    //   } else {
-    //     await api.post('/tambah/barang/store', formData, {
-    //       headers: { 'Content-Type': 'multipart/form-data' }
-    //     });
-    //     Alert.alert('Sukses', 'Barang berhasil ditambahkan!');
-    //   }
-    //   fetchBarang();
-    //   setBarangForm({ nama: '', harga: '', stok: '', kategori: '', gambar: '' });
-    //   setEditId(null);
-    //   setModalVisible(false);
-    // } catch (err) {
-    //   Alert.alert('Error', 'Gagal menyimpan barang');
-    // }
   };
 
   const handleBarangDelete = async (id) => {
@@ -145,6 +126,16 @@ const InventoryManagement = () => {
     );
   };
 
+  // Fungsi format Rupiah
+const formatRupiah = (value) => {
+  if (!value) return '';
+  // Hapus semua karakter selain angka
+  const numberString = value.replace(/[^\d]/g, '');
+  if (!numberString) return '';
+  // Format ke Rupiah
+  return 'Rp ' + parseInt(numberString, 10).toLocaleString('id-ID');
+};
+
   // Kategori Functions
   const handleKategoriSubmit = async () => {
     if (!kategoriForm.nama.trim()) {
@@ -153,7 +144,6 @@ const InventoryManagement = () => {
 
     const payload = {
       nama: kategoriForm.nama.trim(),
-      // deskripsi: kategoriForm.deskripsi.trim()
     };
 
     try {
@@ -277,7 +267,6 @@ const InventoryManagement = () => {
               setEditId(item.id);
               setKategoriForm({
                 nama: item.nama,
-                // deskripsi: item.deskripsi || ''
               });
               setModalVisible(true);
             }}
@@ -398,16 +387,21 @@ const InventoryManagement = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
               <Text style={styles.modalCancelText}>Batal</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>
-              {editId 
-                ? `Edit ${activeTab === 'barang' ? 'Barang' : 'Kategori'}` 
-                : `Tambah ${activeTab === 'barang' ? 'Barang' : 'Kategori'}`
-              }
-            </Text>
+            
+            <View style={styles.modalTitleContainer}>
+              <Text style={styles.modalTitle}>
+                {editId 
+                  ? `Edit ${activeTab === 'barang' ? 'Barang' : 'Kategori'}` 
+                  : `Tambah ${activeTab === 'barang' ? 'Barang' : 'Kategori'}`
+                }
+              </Text>
+            </View>
+            
             <TouchableOpacity 
+              style={styles.modalSaveButton}
               onPress={activeTab === 'barang' ? handleBarangSubmit : handleKategoriSubmit}
             >
               <Text style={styles.modalSaveText}>
@@ -438,8 +432,12 @@ const InventoryManagement = () => {
                   <TextInput
                     style={styles.input}
                     placeholder="Masukkan harga"
-                    value={barangForm.harga}
-                    onChangeText={text => setBarangForm({ ...barangForm, harga: text })}
+                    value={formatRupiah(barangForm.harga)}
+                    onChangeText={(text) => {
+                      // Simpan angka mentah tanpa "Rp" dan titik ke state
+                      const rawNumber = text.replace(/[^\d]/g, '');
+                      setBarangForm({ ...barangForm, harga: rawNumber });
+                    }}
                     keyboardType="numeric"
                     placeholderTextColor="#999"
                   />
@@ -513,8 +511,6 @@ const InventoryManagement = () => {
                     maxLength={50}
                   />
                 </View>
-
-                {/* Deskripsi */}
 
                 {/* Preview */}
                 {kategoriForm.nama.trim() && (
@@ -758,7 +754,6 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
@@ -766,14 +761,29 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
+  modalCancelButton: {
+    minWidth: 80,
+    alignItems: 'flex-start',
+  },
   modalCancelText: {
     fontSize: 16,
     color: '#6c757d',
+    fontWeight: '500',
+  },
+  modalTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#212529',
+    textAlign: 'center',
+  },
+  modalSaveButton: {
+    minWidth: 80,
+    alignItems: 'flex-end',
   },
   modalSaveText: {
     fontSize: 16,
