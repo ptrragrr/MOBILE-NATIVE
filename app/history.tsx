@@ -1,3 +1,5 @@
+import * as FileSystem from "expo-file-system";
+import * as Print from "expo-print";
 import { useRouter } from "expo-router";
 import React, { useContext, useEffect, useState } from "react";
 import {
@@ -63,6 +65,124 @@ export default function HistoryScreen() {
     
   };
 
+// Tambahkan fungsi ini
+const generatePdfAll = async (history: any[]) => {
+  if (!history || history.length === 0) {
+    alert("Tidak ada transaksi untuk diunduh");
+    return;
+  }
+
+  try {
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { font-size: 18px; text-align: center; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; text-align: left; }
+            th { background: #f1f5f9; }
+          </style>
+        </head>
+        <body>
+          <h1>Laporan Semua Transaksi</h1>
+          <table>
+            <tr>
+              <th>Kode</th>
+              <th>Kasir</th>
+              <th>Metode</th>
+              <th>Tanggal</th>
+              <th>Total</th>
+            </tr>
+            ${history.map(trx => `
+              <tr>
+                <td>${trx.kode}</td>
+                <td>${trx.kasir}</td>
+                <td>${trx.metode}</td>
+                <td>${trx.date} ${trx.time}</td>
+                <td>${formatRupiah(trx.amount)}</td>
+              </tr>
+            `).join("")}
+          </table>
+        </body>
+      </html>
+    `;
+
+    // 1. Buat file PDF sementara
+    const { uri } = await Print.printToFileAsync({ html });
+
+    // 2. Request permission untuk pilih folder (biasanya Download)
+    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+    if (!permissions.granted) {
+      alert("Izin akses penyimpanan ditolak ❌");
+      return;
+    }
+
+    // 3. Baca file PDF sementara sebagai base64
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // 4. Simpan ke folder tujuan
+    const fileName = `laporan-transaksi-${Date.now()}.pdf`;
+    const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
+      permissions.directoryUri,
+      fileName,
+      "application/pdf"
+    );
+
+    await FileSystem.writeAsStringAsync(newUri, base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    alert("PDF berhasil disimpan di folder yang kamu pilih ✅");
+  } catch (err) {
+    console.error("Gagal buat PDF:", err);
+    alert("Gagal membuat PDF ❌");
+  }
+};
+
+// const downloadPdf = async (trxId?: number) => {
+//   try {
+//     const token = userInfo?.token;
+
+//     const endpoint = trxId 
+//       ? `https://clear-gnat-certainly.ngrok-free.app/api/history/${trxId}/pdf`
+//       : `https://clear-gnat-certainly.ngrok-free.app/api/history/pdf`;
+
+//     // Download ke storage sementara (cache)
+//     const fileUri = FileSystem.cacheDirectory + "laporan-transaksi.pdf";
+//     const res = await FileSystem.downloadAsync(endpoint, fileUri, {
+//       headers: { Authorization: `Bearer ${token}` },
+//     });
+
+//     // Simpan ke folder Download (Android)
+//     const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+//     if (permissions.granted) {
+//       const base64 = await FileSystem.readAsStringAsync(res.uri, {
+//         encoding: FileSystem.EncodingType.Base64,
+//       });
+
+//       await FileSystem.StorageAccessFramework.createFileAsync(
+//         permissions.directoryUri,
+//         "laporan-transaksi",
+//         "application/pdf"
+//       ).then(async (uri) => {
+//         await FileSystem.writeAsStringAsync(uri, base64, {
+//           encoding: FileSystem.EncodingType.Base64,
+//         });
+//         alert("PDF berhasil disimpan di Downloads ✅");
+//       });
+//     } else {
+//       alert("Izin akses penyimpanan ditolak ❌");
+//     }
+//   } catch (err) {
+//     console.error("Gagal download PDF:", err);
+//     alert("Gagal download PDF");
+//   }
+// };
+
   useEffect(() => {
     fetchHistory();
   }, []);
@@ -97,6 +217,22 @@ export default function HistoryScreen() {
           </View>
         </View>
       </View>
+
+      <View style={styles.modalFooter}>
+  <TouchableOpacity
+    onPress={() => generatePdfAll(salesHistory)}
+    style={[styles.closeButton, { backgroundColor: "#059669", marginBottom: 10 }]}
+  >
+    <Text style={styles.closeButtonText}>Download PDF</Text>
+  </TouchableOpacity>
+
+  {/* <TouchableOpacity
+    onPress={() => setShowModal(false)}
+    style={styles.closeButton}
+  >
+    <Text style={styles.closeButtonText}>Tutup</Text>
+  </TouchableOpacity> */}
+</View>
 
       {/* CONTENT */}
       <View style={styles.container}>
