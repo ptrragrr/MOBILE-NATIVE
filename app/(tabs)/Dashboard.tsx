@@ -203,18 +203,18 @@ setTodaySales(todayTotal);
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.welcomeText}>
-          Halo, {userInfo?.user?.name || "Admin"}! 👋
-        </Text>
-        <Text style={styles.subtitle}>Dashboard Penjualan</Text>
-      </View>
+       <View style={styles.header}>
+      <Text style={styles.welcomeText}>
+        Halo, {userInfo?.user?.name || "Admin"}! 👋
+      </Text>
+      <Text style={styles.subtitle}>Dashboard Penjualan</Text>
+    </View>
 
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4a90e2" />
-          <Text style={styles.loadingText}>Memuat data...</Text>
-        </View>
+    {loading ? (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4a90e2" />
+        <Text style={styles.loadingText}>Memuat data...</Text>
+      </View>
       ) : (
         <>
           {/* Summary Cards */}
@@ -436,16 +436,19 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
   },
   loadingContainer: {
-    flex: 1,
+    // flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 20,
+    minHeight: 300,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#7f8c8d',
-  },
+  marginTop: 12,
+  fontSize: 16,
+  color: '#7f8c8d',
+  textAlign: 'center',
+},
   summaryContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -498,6 +501,7 @@ const styles = StyleSheet.create({
   section: {
     paddingHorizontal: 20,
     marginBottom: 20,
+    flex: 1,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -521,25 +525,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  emptyState: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 40,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
+ // Ganti style emptyText yang ada dengan ini:
+emptyText: {
+  fontSize: 16,
+  color: '#6c757d',
+  textAlign: 'center',
+  flexWrap: 'wrap', // Tambahkan ini
+  width: '100%',    // Tambahkan ini
+  paddingHorizontal: 20, // Tambahkan ini untuk padding
+},
+
+// Atau coba update emptyState container juga:
+emptyState: {
+  backgroundColor: '#ffffff',
+  borderRadius: 16,
+  padding: 40,
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.05,
+  shadowRadius: 4,
+  elevation: 2,
+  marginHorizontal: 0, // Pastikan tidak ada margin horizontal yang membatasi
+  minHeight: 120,
+  justifyContent: 'center',
+  width: '100%', // Tambahkan width 100%
+},
+ emptyIcon: {
+  fontSize: 48,
+  marginBottom: 12,
+},
   emptyText: {
-    fontSize: 16,
-    color: '#6c757d',
-  },
+  fontSize: 16,
+  color: '#6c757d',
+  textAlign: 'center',
+  lineHeight: 22, // Tambahkan line height
+  width: '100%', // Gunakan full width
+  flexShrink: 0, // Jangan shrink text
+  paddingHorizontal: 10, // Tambahkan padding horizontal untuk safety
+  // Hapus flexWrap jika ada, karena bisa menyebabkan masalah di React Native
+},
   historyList: {
     gap: 8,
   },
