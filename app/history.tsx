@@ -79,7 +79,7 @@ const generatePdfAll = async (history: any[]) => {
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
             h1 { font-size: 18px; text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; text-align: left; }
             th { background: #f1f5f9; }
           </style>
@@ -93,16 +93,28 @@ const generatePdfAll = async (history: any[]) => {
               <th>Metode</th>
               <th>Tanggal</th>
               <th>Total</th>
+              <th>Nama Barang</th>
+              <th>Qty</th>
+              <th>Harga</th>
+              <th>Subtotal</th>
             </tr>
-            ${history.map(trx => `
-              <tr>
-                <td>${trx.kode}</td>
-                <td>${trx.kasir}</td>
-                <td>${trx.metode}</td>
-                <td>${trx.date} ${trx.time}</td>
-                <td>${formatRupiah(trx.amount)}</td>
-              </tr>
-            `).join("")}
+            ${history.map(trx => 
+              trx.barang.map((b: any, i: number) => `
+                <tr>
+                  ${i === 0 ? `
+                    <td rowspan="${trx.barang.length}">${trx.kode}</td>
+                    <td rowspan="${trx.barang.length}">${trx.kasir}</td>
+                    <td rowspan="${trx.barang.length}">${trx.metode}</td>
+                    <td rowspan="${trx.barang.length}">${trx.date} ${trx.time}</td>
+                    <td rowspan="${trx.barang.length}">${formatRupiah(trx.amount)}</td>
+                  ` : ""}
+                  <td>${b.nama}</td>
+                  <td>${b.qty}</td>
+                  <td>${formatRupiah(b.harga)}</td>
+                  <td>${formatRupiah(b.subtotal)}</td>
+                </tr>
+              `).join("")
+            ).join("")}
           </table>
         </body>
       </html>
@@ -111,19 +123,19 @@ const generatePdfAll = async (history: any[]) => {
     // 1. Buat file PDF sementara
     const { uri } = await Print.printToFileAsync({ html });
 
-    // 2. Request permission untuk pilih folder (biasanya Download)
+    // 2. Minta permission
     const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
     if (!permissions.granted) {
       alert("Izin akses penyimpanan ditolak ❌");
       return;
     }
 
-    // 3. Baca file PDF sementara sebagai base64
+    // 3. Baca file base64
     const base64 = await FileSystem.readAsStringAsync(uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
 
-    // 4. Simpan ke folder tujuan
+    // 4. Simpan ke folder
     const fileName = `laporan-transaksi-${Date.now()}.pdf`;
     const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
       permissions.directoryUri,
