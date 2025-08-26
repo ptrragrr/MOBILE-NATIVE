@@ -132,7 +132,7 @@ setTodaySales(todayTotal);
       {/* Sticky Header - Di luar ScrollView */}
       <View style={styles.header}>
         <Text style={styles.welcomeText}>
-          Halo, {userInfo?.user?.name || "Admin"}! 👋
+         Selamat Datang
         </Text>
         <Text style={styles.subtitle}>Dashboard Penjualan</Text>
       </View>
@@ -217,10 +217,8 @@ setTodaySales(todayTotal);
                       }}
                     >
                       <View style={styles.historyLeft}>
-                        <View style={styles.avatar}>
-                          <Text style={styles.avatarText}>
-                            {transaction.kasir ? transaction.kasir.charAt(0).toUpperCase() : 'U'}
-                          </Text>
+                        <View style={styles.transactionIcon}>
+                          <Text style={styles.iconTextSmall}>🧾</Text>
                         </View>
                         <View style={styles.historyInfo}>
                           <Text style={styles.historyKasir}>
@@ -358,7 +356,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
-    // Tambahkan shadow untuk header yang sticky
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -367,7 +364,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    zIndex: 1000, // Pastikan header selalu di atas
+    zIndex: 1000,
   },
   scrollContent: {
     flex: 1,
@@ -523,7 +520,7 @@ const styles = StyleSheet.create({
   historyRight: {
     alignItems: 'flex-end',
   },
-  avatar: {
+  transactionIcon: {
     width: 42,
     height: 42,
     borderRadius: 21,
@@ -532,10 +529,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1976d2',
+  iconTextSmall: {
+    fontSize: 18,
   },
   historyInfo: {
     flex: 1,

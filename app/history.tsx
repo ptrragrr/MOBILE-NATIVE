@@ -230,29 +230,12 @@ const generatePdfAll = async (history: any[]) => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.cardHeader}>
-                    <View style={styles.avatarContainer}>
- {trx.fotoKasir ? (
-  <Image
-    source={{ uri: trx.fotoKasir }}
-    style={styles.avatarImage}
-  />
-) : (
-  <Text style={styles.avatarText}>
-    {trx.kasir.charAt(0).toUpperCase()}
-  </Text>
-)}
-</View>
-
-                    {/* <View style={styles.avatarContainer}>
-                      <Text style={styles.avatarText}>
-                        {trx.kasir.charAt(0).toUpperCase()}
-                      </Text>
-                    </View> */}
                     <View style={styles.cardInfo}>
                       <Text style={styles.kasirName}>{trx.kasir}</Text>
                       <Text style={styles.transactionDate}>
                         {trx.date} • {trx.time}
                       </Text>
+                      <Text style={styles.transactionCode}>{trx.kode}</Text>
                     </View>
                     <View style={styles.amountContainer}>
                       <Text style={styles.amount}>{formatRupiah(trx.amount)}</Text>
@@ -498,21 +481,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     flexDirection: "row",
-    alignItems: "center",
-  },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#3b82f6",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
+    alignItems: "flex-start",
   },
   cardInfo: {
     flex: 1,
@@ -521,11 +490,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#1e293b",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   transactionDate: {
     fontSize: 13,
     color: "#64748b",
+    marginBottom: 4,
+  },
+  transactionCode: {
+    fontSize: 12,
+    color: "#3b82f6",
+    fontWeight: "500",
   },
   amountContainer: {
     alignItems: "flex-end",
@@ -534,7 +509,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#059669",
-    marginBottom: 2,
+    marginBottom: 6,
   },
   viewDetail: {
     fontSize: 12,
