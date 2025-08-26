@@ -231,10 +231,23 @@ const generatePdfAll = async (history: any[]) => {
                 >
                   <View style={styles.cardHeader}>
                     <View style={styles.avatarContainer}>
+ {trx.fotoKasir ? (
+  <Image
+    source={{ uri: trx.fotoKasir }}
+    style={styles.avatarImage}
+  />
+) : (
+  <Text style={styles.avatarText}>
+    {trx.kasir.charAt(0).toUpperCase()}
+  </Text>
+)}
+</View>
+
+                    {/* <View style={styles.avatarContainer}>
                       <Text style={styles.avatarText}>
                         {trx.kasir.charAt(0).toUpperCase()}
                       </Text>
-                    </View>
+                    </View> */}
                     <View style={styles.cardInfo}>
                       <Text style={styles.kasirName}>{trx.kasir}</Text>
                       <Text style={styles.transactionDate}>

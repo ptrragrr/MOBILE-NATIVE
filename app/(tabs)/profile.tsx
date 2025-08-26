@@ -15,6 +15,13 @@ import {
 import { AuthContext } from '../../context/AuthContext';
 import api from '../axios';
 
+// Helper buat handle URL foto
+const getPhotoUrl = (path) => {
+  if (!path) return 'https://via.placeholder.com/150/667eea/FFFFFF?text=PP';
+  if (path.startsWith('http')) return path;
+  return `https://clear-gnat-certainly.ngrok-free.app/storage/${path}`; // ganti domain sesuai backend kamu
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { setIsLoggedIn, token } = useContext(AuthContext);
@@ -60,7 +67,7 @@ export default function ProfilePage() {
                 year: 'numeric',
               })
             : '',
-          profilePhoto: admin.profile_photo || 'https://via.placeholder.com/150/667eea/FFFFFF?text=PP',
+          profilePhoto: admin.photo || 'https://via.placeholder.com/150/667eea/FFFFFF?text=PP',
         };
 
         setUserData(profileData);
