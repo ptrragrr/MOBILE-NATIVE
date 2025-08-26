@@ -92,15 +92,6 @@ const todayTotal = mapped
 
 setTodaySales(todayTotal);
 
-    // const todayTotal = mapped
-    //   .filter((item: any) => {
-    //     const itemDate = new Date(item.created_at);
-    //     return itemDate >= todayStart && itemDate <= todayEnd;
-    //   })
-    //   .reduce((sum: number, item: any) => sum + item.amount, 0);
-    
-    // setTodaySales(todayTotal);
-
     // Hitung penjualan bulan ini
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
@@ -131,186 +122,129 @@ setTodaySales(todayTotal);
     setLoading(false);
   }
 };
-  // const fetchHistory = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const res = await api.get('/history', {
-  //       headers: {
-  //         Authorization: `Bearer ${userInfo?.token}`,
-  //       },
-  //     });
-
-  //     console.log("DATA HISTORY:", res.data);
-
-  //     const mapped = res.data.data.map((item: any) => ({
-  //       id: item.id,
-  //       kasir: item.nama_kasir,
-  //       kode: item.kode_transaksi,
-  //       metode: item.metode_pembayaran,
-  //       amount: Number(item.total_transaksi) || 0,
-  //       date: new Date(item.created_at).toLocaleDateString("id-ID"),
-  //       time: new Date(item.created_at).toLocaleTimeString("id-ID"),
-  //       created_at: item.created_at, // tambahkan created_at untuk perhitungan
-  //       barang: (item.details || []).map((d: any) => ({
-  //         nama: d.barang?.nama_barang || "-",
-  //         qty: d.jumlah,
-  //         harga: Number(d.harga_satuan) || 0,
-  //         subtotal: Number(d.total_harga) || 0,
-  //       })),
-  //     }));
-
-  //     setSalesHistory(mapped);
-
-  //     // Hitung penjualan hari ini
-  //     const today = new Date();
-  //     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  //     const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-      
-  //     const todayTotal = mapped
-  //       .filter((item: any) => {
-  //         const itemDate = new Date(item.created_at);
-  //         return itemDate >= todayStart && itemDate <= todayEnd;
-  //       })
-  //       .reduce((sum: number, item: any) => sum + item.amount, 0);
-      
-  //     setTodaySales(todayTotal);
-
-  //     // Hitung penjualan bulan ini
-  //     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  //     const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
-      
-  //     const monthlyTotal = mapped
-  //       .filter((item: any) => {
-  //         const itemDate = new Date(item.created_at);
-  //         return itemDate >= monthStart && itemDate <= monthEnd;
-  //       })
-  //       .reduce((sum: number, item: any) => sum + item.amount, 0);
-      
-  //     setMonthlySales(monthlyTotal);
-
-  //   } catch (err) {
-  //     console.error("Gagal memuat history:", err);
-  //     Alert.alert('Gagal memuat history');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   useEffect(() => {
     fetchHistory();
   }, []);
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-       <View style={styles.header}>
-      <Text style={styles.welcomeText}>
-        Halo, {userInfo?.user?.name || "Admin"}! 👋
-      </Text>
-      <Text style={styles.subtitle}>Dashboard Penjualan</Text>
-    </View>
-
-    {loading ? (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4a90e2" />
-        <Text style={styles.loadingText}>Memuat data...</Text>
+    <View style={styles.container}>
+      {/* Sticky Header - Di luar ScrollView */}
+      <View style={styles.header}>
+        <Text style={styles.welcomeText}>
+          Halo, {userInfo?.user?.name || "Admin"}! 👋
+        </Text>
+        <Text style={styles.subtitle}>Dashboard Penjualan</Text>
       </View>
-      ) : (
-        <>
-          {/* Summary Cards */}
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryCard}>
-              <View style={styles.cardIcon}>
-                <Text style={styles.iconText}>💰</Text>
-              </View>
-              <Text style={styles.summaryTitle}>Penjualan Hari Ini</Text>
-              <Text style={styles.summaryValue}>{formatRupiah(todaySales)}</Text>
-            </View>
 
-            <View style={styles.summaryCard}>
-              <View style={styles.cardIcon}>
-                <Text style={styles.iconText}>📊</Text>
-              </View>
-              <Text style={styles.summaryTitle}>Penjualan Bulan Ini</Text>
-              <Text style={styles.summaryValue}>{formatRupiah(monthlySales)}</Text>
-            </View>
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={true}
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4a90e2" />
+            <Text style={styles.loadingText}>Memuat data...</Text>
           </View>
-
-          {/* Additional Summary Cards */}
-          <View style={styles.summaryContainer}>
-            <View style={styles.summaryCard}>
-              <View style={styles.cardIcon}>
-                <Text style={styles.iconText}>📦</Text>
+        ) : (
+          <>
+            {/* Summary Cards */}
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryCard}>
+                <View style={styles.cardIcon}>
+                  <Text style={styles.iconText}>💰</Text>
+                </View>
+                <Text style={styles.summaryTitle}>Penjualan Hari Ini</Text>
+                <Text style={styles.summaryValue}>{formatRupiah(todaySales)}</Text>
               </View>
-              <Text style={styles.summaryTitle}>Total Produk Terjual</Text>
-              <Text style={styles.summaryValue}>{totalProducts}</Text>
+
+              <View style={styles.summaryCard}>
+                <View style={styles.cardIcon}>
+                  <Text style={styles.iconText}>📊</Text>
+                </View>
+                <Text style={styles.summaryTitle}>Penjualan Bulan Ini</Text>
+                <Text style={styles.summaryValue}>{formatRupiah(monthlySales)}</Text>
+              </View>
             </View>
 
-            <View style={styles.summaryCard}>
-              <View style={styles.cardIcon}>
-                <Text style={styles.iconText}>🧾</Text>
+            {/* Additional Summary Cards */}
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryCard}>
+                <View style={styles.cardIcon}>
+                  <Text style={styles.iconText}>📦</Text>
+                </View>
+                <Text style={styles.summaryTitle}>Total Produk Terjual</Text>
+                <Text style={styles.summaryValue}>{totalProducts}</Text>
               </View>
-              <Text style={styles.summaryTitle}>Total Transaksi</Text>
-              <Text style={styles.summaryValue}>{salesHistory.length}</Text>
-            </View>
-          </View>
 
-          {/* History Section */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
-              <TouchableOpacity 
-                style={styles.viewAllButton}
-                onPress={() => router.push('/history')}
-              >
-                <Text style={styles.viewAllText}>Lihat Semua</Text>
-              </TouchableOpacity>
+              <View style={styles.summaryCard}>
+                <View style={styles.cardIcon}>
+                  <Text style={styles.iconText}>🧾</Text>
+                </View>
+                <Text style={styles.summaryTitle}>Total Transaksi</Text>
+                <Text style={styles.summaryValue}>{salesHistory.length}</Text>
+              </View>
             </View>
 
-            {salesHistory.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>📋</Text>
-                <Text style={styles.emptyText}>Belum ada transaksi</Text>
+            {/* History Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
+                <TouchableOpacity 
+                  style={styles.viewAllButton}
+                  onPress={() => router.push('/history')}
+                >
+                  <Text style={styles.viewAllText}>Lihat Semua</Text>
+                </TouchableOpacity>
               </View>
-            ) : (
-              <View style={styles.historyList}>
-                {salesHistory.slice(0, 5).map((transaction, index) => (
-                  <TouchableOpacity 
-                    key={transaction.id || index} 
-                    style={styles.historyCard}
-                    onPress={() => {
-                      setSelectedTrx(transaction);
-                      setShowModal(true);
-                    }}
-                  >
-                    <View style={styles.historyLeft}>
-                      <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>
-                          {transaction.kasir ? transaction.kasir.charAt(0).toUpperCase() : 'U'}
-                        </Text>
+
+              {salesHistory.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIcon}>📋</Text>
+                  <Text style={styles.emptyText}>Belum ada transaksi</Text>
+                </View>
+              ) : (
+                <View style={styles.historyList}>
+                  {salesHistory.slice(0, 5).map((transaction, index) => (
+                    <TouchableOpacity 
+                      key={transaction.id || index} 
+                      style={styles.historyCard}
+                      onPress={() => {
+                        setSelectedTrx(transaction);
+                        setShowModal(true);
+                      }}
+                    >
+                      <View style={styles.historyLeft}>
+                        <View style={styles.avatar}>
+                          <Text style={styles.avatarText}>
+                            {transaction.kasir ? transaction.kasir.charAt(0).toUpperCase() : 'U'}
+                          </Text>
+                        </View>
+                        <View style={styles.historyInfo}>
+                          <Text style={styles.historyKasir}>
+                            {transaction.kasir || 'Unknown'}
+                          </Text>
+                          <Text style={styles.historyDate}>
+                            {transaction.date} • {transaction.time}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.historyInfo}>
-                        <Text style={styles.historyKasir}>
-                          {transaction.kasir || 'Unknown'}
+                      <View style={styles.historyRight}>
+                        <Text style={styles.historyAmount}>
+                          {formatRupiah(transaction.amount)}
                         </Text>
-                        <Text style={styles.historyDate}>
-                          {transaction.date} • {transaction.time}
-                        </Text>
+                        <Text style={styles.tapToView}>Lihat Detail →</Text>
                       </View>
-                    </View>
-                    <View style={styles.historyRight}>
-                      <Text style={styles.historyAmount}>
-                        {formatRupiah(transaction.amount)}
-                      </Text>
-                      <Text style={styles.tapToView}>Lihat Detail →</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-        </>
-      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
 
       {/* MODAL DETAIL */}
       <Modal visible={showModal} animationType="slide" transparent>
@@ -406,7 +340,7 @@ setTodaySales(todayTotal);
           </View>
         </View>
       </Modal>
-    </ScrollView>
+    </View>
   );
 };
 
@@ -424,6 +358,19 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
+    // Tambahkan shadow untuk header yang sticky
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000, // Pastikan header selalu di atas
+  },
+  scrollContent: {
+    flex: 1,
   },
   welcomeText: {
     fontSize: 24,
@@ -436,7 +383,6 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
   },
   loadingContainer: {
-    // flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 80,
@@ -444,11 +390,11 @@ const styles = StyleSheet.create({
     minHeight: 300,
   },
   loadingText: {
-  marginTop: 12,
-  fontSize: 16,
-  color: '#7f8c8d',
-  textAlign: 'center',
-},
+    marginTop: 12,
+    fontSize: 16,
+    color: '#7f8c8d',
+    textAlign: 'center',
+  },
   summaryContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -466,7 +412,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
-    minHeight: 140, // Tambahkan minimum height
+    minHeight: 140,
   },
   cardIcon: {
     width: 50,
@@ -486,9 +432,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     lineHeight: 16,
-    paddingHorizontal: 4, // Tambahkan padding horizontal
-    flexWrap: 'wrap', // Izinkan text wrap
-    width: '100%', // Gunakan full width
+    paddingHorizontal: 4,
+    flexWrap: 'wrap',
+    width: '100%',
   },
   summaryValue: {
     fontSize: 18,
@@ -525,46 +471,34 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
- // Ganti style emptyText yang ada dengan ini:
-emptyText: {
-  fontSize: 16,
-  color: '#6c757d',
-  textAlign: 'center',
-  flexWrap: 'wrap', // Tambahkan ini
-  width: '100%',    // Tambahkan ini
-  paddingHorizontal: 20, // Tambahkan ini untuk padding
-},
-
-// Atau coba update emptyState container juga:
-emptyState: {
-  backgroundColor: '#ffffff',
-  borderRadius: 16,
-  padding: 40,
-  alignItems: 'center',
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 4,
-  elevation: 2,
-  marginHorizontal: 0, // Pastikan tidak ada margin horizontal yang membatasi
-  minHeight: 120,
-  justifyContent: 'center',
-  width: '100%', // Tambahkan width 100%
-},
- emptyIcon: {
-  fontSize: 48,
-  marginBottom: 12,
-},
+  emptyState: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    marginHorizontal: 0,
+    minHeight: 120,
+    justifyContent: 'center',
+    width: '100%',
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
   emptyText: {
-  fontSize: 16,
-  color: '#6c757d',
-  textAlign: 'center',
-  lineHeight: 22, // Tambahkan line height
-  width: '100%', // Gunakan full width
-  flexShrink: 0, // Jangan shrink text
-  paddingHorizontal: 10, // Tambahkan padding horizontal untuk safety
-  // Hapus flexWrap jika ada, karena bisa menyebabkan masalah di React Native
-},
+    fontSize: 16,
+    color: '#6c757d',
+    textAlign: 'center',
+    lineHeight: 22,
+    width: '100%',
+    flexShrink: 0,
+    paddingHorizontal: 10,
+  },
   historyList: {
     gap: 8,
   },
