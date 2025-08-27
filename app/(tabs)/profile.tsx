@@ -270,7 +270,7 @@ export default function ProfilePage() {
               
               <TouchableOpacity
                 style={styles.actionButton}
-                onPress={() => router.push('/admin/RoleManagement')}
+                onPress={() => router.push('/role')}
               >
                 <View style={styles.actionButtonContent}>
                   <View style={[styles.actionIconContainer, { backgroundColor: '#8b5cf6' }]}>
