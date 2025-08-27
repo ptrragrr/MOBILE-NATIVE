@@ -205,39 +205,65 @@ setTodaySales(todayTotal);
                   <Text style={styles.emptyIcon}>📋</Text>
                   <Text style={styles.emptyText}>Belum ada transaksi</Text>
                 </View>
-              ) : (
-                <View style={styles.historyList}>
-                  {salesHistory.slice(0, 5).map((transaction, index) => (
-                    <TouchableOpacity 
-                      key={transaction.id || index} 
-                      style={styles.historyCard}
-                      onPress={() => {
-                        setSelectedTrx(transaction);
-                        setShowModal(true);
-                      }}
-                    >
-                      <View style={styles.historyLeft}>
-                        <View style={styles.transactionIcon}>
-                          <Text style={styles.iconTextSmall}>🧾</Text>
-                        </View>
-                        <View style={styles.historyInfo}>
-                          <Text style={styles.historyKasir}>
-                            {transaction.kasir || 'Unknown'}
-                          </Text>
-                          <Text style={styles.historyDate}>
-                            {transaction.date} • {transaction.time}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.historyRight}>
-                        <Text style={styles.historyAmount}>
-                          {formatRupiah(transaction.amount)}
-                        </Text>
-                        <Text style={styles.tapToView}>Lihat Detail →</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              ) : ( <View style={styles.historyList}>
+              {salesHistory.map((trx) => (
+                <TouchableOpacity
+                  key={trx.id}
+                  style={styles.transactionCard}
+                  onPress={() => {
+                    setSelectedTrx(trx);
+                    setShowModal(true);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardInfo}>
+                      <Text style={styles.kasirName}>{trx.kasir}</Text>
+                      <Text style={styles.transactionDate}>
+                        {trx.date} • {trx.time}
+                      </Text>
+                      <Text style={styles.transactionCode}>{trx.kode}</Text>
+                    </View>
+                    <View style={styles.amountContainer}>
+                      <Text style={styles.amount}>{formatRupiah(trx.amount)}</Text>
+                      <Text style={styles.viewDetail}>Lihat Detail →</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+                // <View style={styles.historyList}>
+                //   {salesHistory.slice(0, 5).map((transaction, index) => (
+                //     <TouchableOpacity 
+                //       key={transaction.id || index} 
+                //       style={styles.historyCard}
+                //       onPress={() => {
+                //         setSelectedTrx(transaction);
+                //         setShowModal(true);
+                //       }}
+                //     >
+                //       <View style={styles.historyLeft}>
+                //         <View style={styles.transactionIcon}>
+                //           <Text style={styles.iconTextSmall}>🧾</Text>
+                //         </View>
+                //         <View style={styles.historyInfo}>
+                //           <Text style={styles.historyKasir}>
+                //             {transaction.kasir || 'Unknown'}
+                //           </Text>
+                //           <Text style={styles.historyDate}>
+                //             {transaction.date} • {transaction.time}
+                //           </Text>
+                //         </View>
+                //       </View>
+                //       <View style={styles.historyRight}>
+                //         <Text style={styles.historyAmount}>
+                //           {formatRupiah(transaction.amount)}
+                //         </Text>
+                //         <Text style={styles.tapToView}>Lihat Detail →</Text>
+                //       </View>
+                //     </TouchableOpacity>
+                //   ))}
+                // </View>
               )}
             </View>
           </>
@@ -496,65 +522,57 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     paddingHorizontal: 10,
   },
-  historyList: {
-    gap: 8,
+historyList: {
+    gap: 12,
   },
-  historyCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
+  transactionCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
     padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
   },
-  historyLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  cardInfo: {
     flex: 1,
   },
-  historyRight: {
-    alignItems: 'flex-end',
-  },
-  transactionIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#e3f2fd',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  iconTextSmall: {
-    fontSize: 18,
-  },
-  historyInfo: {
-    flex: 1,
-  },
-  historyKasir: {
+  kasirName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 2,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 6,
   },
-  historyDate: {
+  transactionDate: {
     fontSize: 13,
-    color: '#6c757d',
+    color: "#64748b",
+    marginBottom: 4,
   },
-  historyAmount: {
+  transactionCode: {
+    fontSize: 12,
+    color: "#3b82f6",
+    fontWeight: "500",
+  },
+  amountContainer: {
+    alignItems: "flex-end",
+  },
+  amount: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#27ae60',
-    marginBottom: 2,
+    fontWeight: "700",
+    color: "#059669",
+    marginBottom: 6,
   },
-  tapToView: {
-    fontSize: 11,
-    color: '#4a90e2',
-    fontWeight: '500',
+  viewDetail: {
+    fontSize: 12,
+    color: "#3b82f6",
+    fontWeight: "500",
   },
 
   // Modal Styles
@@ -652,7 +670,7 @@ const styles = StyleSheet.create({
   itemsSection: {
     marginBottom: 24,
   },
-  sectionTitleModal: {
+  sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
     color: "#1e293b",
