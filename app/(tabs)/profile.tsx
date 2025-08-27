@@ -105,109 +105,47 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = async () => {
-  try {
-    const formData = new FormData();
-    formData.append('name', editedData.name);
-    formData.append('email', editedData.email);
-    formData.append('phone', editedData.phone);
+    try {
+      const formData = new FormData();
+      formData.append('name', editedData.name);
+      formData.append('email', editedData.email);
+      formData.append('phone', editedData.phone);
 
-    if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
-      const uri = editedData.profilePhoto;
-      const filename = uri.split('/').pop() || `photo.jpg`;
-      const ext = filename.split('.').pop();
-      let type = `image/${ext}`;
-      if (ext === 'jpg' || ext === 'jpeg') type = 'image/jpeg';
-      if (ext === 'png') type = 'image/png';
+      if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
+        const uri = editedData.profilePhoto;
+        const filename = uri.split('/').pop() || `photo.jpg`;
+        const ext = filename.split('.').pop();
+        let type = `image/${ext}`;
+        if (ext === 'jpg' || ext === 'jpeg') type = 'image/jpeg';
+        if (ext === 'png') type = 'image/png';
 
-      formData.append('profile_photo', {
-        uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''), // Android langsung uri
-        name: filename,
-        type,
+        formData.append('profile_photo', {
+          uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+          name: filename,
+          type,
+        });
+      }
+
+      const res = await api.post('/auth/update-profile', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      setUserData(res.data.user);
+      setIsEditing(false);
+      Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
+    } catch (err) {
+      console.error('Gagal update profil:', err.response?.data || err.message);
+      Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
     }
-
-    const res = await api.post('/auth/update-profile', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    // response Laravel
-    setUserData(res.data.user);
-    setIsEditing(false);
-    Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
-  } catch (err) {
-    console.error('Gagal update profil:', err.response?.data || err.message);
-    Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
-  }
-};
-  // const handleSaveProfile = async () => {
-  //   try {
-  //     const formData = new FormData();
-  //     formData.append('name', editedData.name);
-  //     formData.append('email', editedData.email);
-  //     formData.append('phone', editedData.phone);
-
-  //     if (editedData.profilePhoto && !editedData.profilePhoto.startsWith('http')) {
-  //       const uri = editedData.profilePhoto;
-  //       const filename = uri.split('/').pop() || `photo.jpg`;
-  //       const ext = filename.split('.').pop();
-  //       let type = `image/${ext}`;
-  //       if (ext === 'jpg') type = 'image/jpeg';
-
-  //       formData.append('profile_photo', {
-  //         uri,
-  //         name: filename,
-  //         type,
-  //       });
-  //     }
-
-  //     const res = await api.post('/auth/update-profile', formData, {
-  //       headers: {
-  //         'Content-Type': 'multipart/form-data',
-  //         Authorization: `Bearer ${token}`,
-  //       },
-  //     });
-
-  //     setUserData(res.data.user);
-  //     setIsEditing(false);
-  //     Alert.alert('Berhasil', 'Profil berhasil diperbarui!');
-  //   } catch (err) {
-  //     console.error('Gagal update profil:', err.response?.data || err.message);
-  //     Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
-  //   }
-  // };
+  };
 
   const handleCancelEdit = () => {
     setEditedData(userData);
     setIsEditing(false);
   };
-
-  // const handleChangePassword = async () => {
-  //   if (passwordData.newPassword !== passwordData.confirmPassword) {
-  //     Alert.alert('Error', 'Password baru dan konfirmasi password tidak sama!');
-  //     return;
-  //   }
-  //   if (passwordData.newPassword.length < 6) {
-  //     Alert.alert('Error', 'Password minimal 6 karakter!');
-  //     return;
-  //   }
-  //   try {
-  //     await api.post('/change-password', passwordData, {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-  //     setShowChangePasswordModal(false);
-  //     setPasswordData({
-  //       currentPassword: '',
-  //       newPassword: '',
-  //       confirmPassword: '',
-  //     });
-  //     Alert.alert('Berhasil', 'Password berhasil diubah!');
-  //   } catch (err) {
-  //     Alert.alert('Error', 'Gagal mengubah password');
-  //   }
-  // };
 
   const handleLogout = () => {
     setShowLogoutModal(false);
@@ -286,9 +224,6 @@ export default function ProfilePage() {
 
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userData.name || 'Nama Pengguna'}</Text>
-            {/* <View style={styles.positionBadge}>
-              <Text style={styles.profilePosition}>{userData.position || 'Posisi'}</Text>
-            </View> */}
             <View style={styles.joinDateContainer}>
               <Text style={styles.joinDateIcon}>📅</Text>
               <Text style={styles.joinDate}>Bergabung {userData.joinDate}</Text>
@@ -306,8 +241,67 @@ export default function ProfilePage() {
           <ProfileField label="Nama Lengkap" value={userData.name} isEditable keyName="name" icon="👤" />
           <ProfileField label="Email" value={userData.email} isEditable keyName="email" icon="📧" />
           <ProfileField label="No. Telepon" value={userData.phone} isEditable keyName="phone" icon="📱" />
-          {/* <ProfileField label="Posisi" value={userData.position} isEditable={false} icon="💼" /> */}
         </View>
+
+        {/* Admin Management Section - Only show for admin */}
+        {userData.position?.toLowerCase().includes('admin') && !isEditing && (
+          <View style={styles.sectionContainer}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Manajemen Sistem</Text>
+              <View style={styles.sectionDivider} />
+            </View>
+
+            <View style={styles.actionButtonsContainer}>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/user')}
+              >
+                <View style={styles.actionButtonContent}>
+                  <View style={[styles.actionIconContainer, { backgroundColor: '#3b82f6' }]}>
+                    <Text style={styles.actionIcon}>👥</Text>
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={styles.actionText}>Kelola User</Text>
+                    <Text style={styles.actionSubtext}>Tambah, edit, hapus pengguna</Text>
+                  </View>
+                  <Text style={styles.actionArrow}>›</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/admin/RoleManagement')}
+              >
+                <View style={styles.actionButtonContent}>
+                  <View style={[styles.actionIconContainer, { backgroundColor: '#8b5cf6' }]}>
+                    <Text style={styles.actionIcon}>🎭</Text>
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={styles.actionText}>Kelola Role</Text>
+                    <Text style={styles.actionSubtext}>Atur peran dan tingkatan</Text>
+                  </View>
+                  <Text style={styles.actionArrow}>›</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={() => router.push('/admin/PermissionManagement')}
+              >
+                <View style={styles.actionButtonContent}>
+                  <View style={[styles.actionIconContainer, { backgroundColor: '#10b981' }]}>
+                    <Text style={styles.actionIcon}>🔐</Text>
+                  </View>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={styles.actionText}>Kelola Permission</Text>
+                    <Text style={styles.actionSubtext}>Atur hak akses sistem</Text>
+                  </View>
+                  <Text style={styles.actionArrow}>›</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         {/* Action Buttons */}
         <View style={styles.sectionContainer}>
@@ -329,19 +323,6 @@ export default function ProfilePage() {
             </View>
           ) : (
             <View style={styles.actionButtonsContainer}>
-              {/* <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => setShowChangePasswordModal(true)}
-              >
-                <View style={styles.actionButtonContent}>
-                  <View style={styles.actionIconContainer}>
-                    <Text style={styles.actionIcon}>🔐</Text>
-                  </View>
-                  <Text style={styles.actionText}>Ubah Password</Text>
-                  <Text style={styles.actionArrow}>›</Text>
-                </View>
-              </TouchableOpacity> */}
-              
               <TouchableOpacity
                 style={[styles.actionButton, styles.logoutButton]}
                 onPress={() => setShowLogoutModal(true)}
@@ -360,77 +341,6 @@ export default function ProfilePage() {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-
-      {/* Change Password Modal */}
-      {/* {showChangePasswordModal && (
-        <View style={styles.modalOverlay}>
-          <View style={styles.passwordModalContainer}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalIconContainer}>
-                <Text style={styles.modalIcon}>🔐</Text>
-              </View>
-              <Text style={styles.modalTitle}>Ubah Password</Text>
-              <Text style={styles.modalSubtitle}>Buat password baru yang aman</Text>
-            </View>
-
-            <View style={styles.modalContent}>
-              <View style={styles.passwordInputContainer}>
-                <Text style={styles.inputLabel}>Password Lama</Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputIcon}>🔒</Text>
-                  <TextInput
-                    secureTextEntry
-                    style={styles.passwordInput}
-                    placeholder="Masukkan password lama"
-                    value={passwordData.currentPassword}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, currentPassword: text })}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.passwordInputContainer}>
-                <Text style={styles.inputLabel}>Password Baru</Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputIcon}>🔑</Text>
-                  <TextInput
-                    secureTextEntry
-                    style={styles.passwordInput}
-                    placeholder="Masukkan password baru"
-                    value={passwordData.newPassword}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, newPassword: text })}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.passwordInputContainer}>
-                <Text style={styles.inputLabel}>Konfirmasi Password</Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputIcon}>✓</Text>
-                  <TextInput
-                    secureTextEntry
-                    style={styles.passwordInput}
-                    placeholder="Konfirmasi password baru"
-                    value={passwordData.confirmPassword}
-                    onChangeText={(text) => setPasswordData({ ...passwordData, confirmPassword: text })}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.passwordModalActions}>
-              <TouchableOpacity
-                style={styles.passwordCancelButton}
-                onPress={() => setShowChangePasswordModal(false)}
-              >
-                <Text style={styles.passwordCancelText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.passwordSaveButton} onPress={handleChangePassword}>
-                <Text style={styles.passwordSaveText}>Ubah Password</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )} */}
 
       {/* Logout Modal */}
       {showLogoutModal && (
@@ -743,7 +653,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    // backgroundColor: '#dc3545',
     color: '#64748b',
   },
   saveButton: {
@@ -797,11 +706,18 @@ const styles = StyleSheet.create({
   actionIcon: {
     fontSize: 18,
   },
-  actionText: {
+  actionTextContainer: {
     flex: 1,
+  },
+  actionText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1e293b',
+  },
+  actionSubtext: {
+    fontSize: 13,
+    color: '#64748b',
+    marginTop: 2,
   },
   actionArrow: {
     fontSize: 20,
@@ -826,7 +742,7 @@ const styles = StyleSheet.create({
     height: 20,
   },
 
-  // Modals - Updated positioning
+  // Modals
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -834,123 +750,10 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start', // Changed from 'center' to 'flex-start'
+    justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 100, // Added top padding to position modals in center-top
+    paddingTop: 100,
     paddingHorizontal: 20,
-  },
-
-  // Password Modal
-  passwordModalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    width: '100%',
-    maxWidth: 400,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    elevation: 25,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    paddingTop: 30,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#f8fafc',
-  },
-  modalIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#007bff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  modalIcon: {
-    fontSize: 28,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 6,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  modalContent: {
-    padding: 24,
-  },
-  passwordInputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    marginBottom: 8,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    overflow: 'hidden',
-  },
-  inputIcon: {
-    fontSize: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-  },
-  passwordInput: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 16,
-    paddingRight: 16,
-    color: '#1e293b',
-  },
-  passwordModalActions: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    backgroundColor: '#f8fafc',
-  },
-  passwordCancelButton: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  passwordCancelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  passwordSaveButton: {
-    flex: 1,
-    backgroundColor: '#007bff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  passwordSaveText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
   },
 
   // Logout Modal
