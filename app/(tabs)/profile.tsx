@@ -225,7 +225,6 @@ export default function ProfilePage() {
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userData.name || 'Nama Pengguna'}</Text>
             <View style={styles.joinDateContainer}>
-              <Text style={styles.joinDateIcon}>📅</Text>
               <Text style={styles.joinDate}>Bergabung {userData.joinDate}</Text>
             </View>
           </View>
@@ -244,7 +243,7 @@ export default function ProfilePage() {
         </View>
 
         {/* Admin Management Section - Only show for admin */}
-        {userData.position?.toLowerCase().includes('admin') && !isEditing && (
+        {/* {userData.position?.toLowerCase().includes('admin') && !isEditing && (
           <View style={styles.sectionContainer}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Manajemen Sistem</Text>
@@ -283,25 +282,9 @@ export default function ProfilePage() {
                   <Text style={styles.actionArrow}>›</Text>
                 </View>
               </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/admin/PermissionManagement')}
-              >
-                <View style={styles.actionButtonContent}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: '#10b981' }]}>
-                    <Text style={styles.actionIcon}>🔐</Text>
-                  </View>
-                  <View style={styles.actionTextContainer}>
-                    <Text style={styles.actionText}>Kelola Permission</Text>
-                    <Text style={styles.actionSubtext}>Atur hak akses sistem</Text>
-                  </View>
-                  <Text style={styles.actionArrow}>›</Text>
-                </View>
-              </TouchableOpacity>
             </View>
           </View>
-        )}
+        )} */}
 
         {/* Action Buttons */}
         <View style={styles.sectionContainer}>

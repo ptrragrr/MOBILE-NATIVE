@@ -1,25 +1,40 @@
 import { useRouter } from 'expo-router';
 import React, { useContext, useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    FlatList,
-    Modal,
-    RefreshControl,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../app/axios";
 import { AuthContext } from "../context/AuthContext";
 
 const { width } = Dimensions.get('window');
+
+// Daftar permission yang tersedia
+const AVAILABLE_PERMISSIONS = [
+  { id: 1, name: 'create-user', display_name: 'Buat User', category: 'User Management' },
+  { id: 2, name: 'edit-user', display_name: 'Edit User', category: 'User Management' },
+  { id: 3, name: 'delete-user', display_name: 'Hapus User', category: 'User Management' },
+  { id: 4, name: 'view-user', display_name: 'Lihat User', category: 'User Management' },
+  { id: 5, name: 'create-role', display_name: 'Buat Role', category: 'Role Management' },
+  { id: 6, name: 'edit-role', display_name: 'Edit Role', category: 'Role Management' },
+  { id: 7, name: 'delete-role', display_name: 'Hapus Role', category: 'Role Management' },
+  { id: 8, name: 'view-role', display_name: 'Lihat Role', category: 'Role Management' },
+  { id: 9, name: 'manage-settings', display_name: 'Kelola Pengaturan', category: 'System' },
+  { id: 10, name: 'view-reports', display_name: 'Lihat Laporan', category: 'Reports' },
+  { id: 11, name: 'export-data', display_name: 'Export Data', category: 'Reports' },
+];
 
 export default function RoleManagement() {
   const router = useRouter();
@@ -37,6 +52,7 @@ export default function RoleManagement() {
     name: "",
     full_name: "",
     guard_name: "api",
+    permissions: [], // Array untuk menyimpan selected permissions
   });
 
   const [stats, setStats] = useState({
@@ -97,10 +113,16 @@ export default function RoleManagement() {
 
     setSubmitting(true);
     try {
+      // Prepare data with permissions
+      const submitData = {
+        ...formData,
+        permissions: formData.permissions
+      };
+
       if (editingRole) {
         const res = await api.put(
           `/master/roles/${editingRole.id}`,
-          formData,
+          submitData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const updatedRole = res.data.role || res.data.data || res.data;
@@ -110,17 +132,18 @@ export default function RoleManagement() {
         Alert.alert("Berhasil", "Role berhasil diperbarui!");
       } else {
         const res = await api.post(
-          "/master/roles",
-          formData,
+          "/master/roles/store",
+          submitData,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("wooo: ",res.data);
         const newRole = res.data.role || res.data.data || res.data;
         setRoles(prev => [...prev, newRole]);
         Alert.alert("Berhasil", "Role berhasil ditambahkan!");
       }
       
       setShowModal(false);
-      setFormData({ name: "", full_name: "", guard_name: "api" });
+      setFormData({ name: "", full_name: "", guard_name: "api", permissions: [] });
       setEditingRole(null);
     } catch (error) {
       console.log(error.response?.data || error.message);
@@ -136,6 +159,7 @@ export default function RoleManagement() {
       name: role.name,
       full_name: role.full_name,
       guard_name: role.guard_name,
+      permissions: role.permissions || [], // Load existing permissions
     });
     setShowModal(true);
   };
@@ -168,8 +192,48 @@ export default function RoleManagement() {
 
   const closeModal = () => {
     setShowModal(false);
-    setFormData({ name: "", full_name: "", guard_name: "api" });
+    setFormData({ name: "", full_name: "", guard_name: "api", permissions: [] });
     setEditingRole(null);
+  };
+
+  // Toggle permission selection
+  const togglePermission = (permissionName) => {
+    setFormData(prev => ({
+      ...prev,
+      permissions: prev.permissions.includes(permissionName)
+        ? prev.permissions.filter(p => p !== permissionName)
+        : [...prev.permissions, permissionName]
+    }));
+  };
+
+  // Select all permissions in a category
+  const toggleCategoryPermissions = (category) => {
+    const categoryPermissions = AVAILABLE_PERMISSIONS
+      .filter(p => p.category === category)
+      .map(p => p.name);
+    
+    const allSelected = categoryPermissions.every(p => 
+      formData.permissions.includes(p)
+    );
+
+    setFormData(prev => ({
+      ...prev,
+      permissions: allSelected
+        ? prev.permissions.filter(p => !categoryPermissions.includes(p))
+        : [...new Set([...prev.permissions, ...categoryPermissions])]
+    }));
+  };
+
+  // Group permissions by category
+  const getPermissionsByCategory = () => {
+    const grouped = {};
+    AVAILABLE_PERMISSIONS.forEach(permission => {
+      if (!grouped[permission.category]) {
+        grouped[permission.category] = [];
+      }
+      grouped[permission.category].push(permission);
+    });
+    return grouped;
   };
 
   const RoleCard = ({ item, index }) => (
@@ -182,6 +246,12 @@ export default function RoleManagement() {
           <View style={styles.roleTag}>
             <Text style={styles.roleText}>{item.name}</Text>
           </View>
+          {/* Show permission count */}
+          {item.permissions && (
+            <Text style={styles.permissionCount}>
+              {item.permissions.length} Permission{item.permissions.length > 1 ? 's' : ''}
+            </Text>
+          )}
         </View>
         <View style={styles.actionButtons}>
           <TouchableOpacity 
@@ -201,6 +271,43 @@ export default function RoleManagement() {
     </View>
   );
 
+  const CheckboxItem = ({ permission, isSelected, onToggle }) => (
+    <TouchableOpacity 
+      style={styles.checkboxContainer}
+      onPress={() => onToggle(permission.name)}
+    >
+      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+        {isSelected && <Text style={styles.checkboxIcon}>✓</Text>}
+      </View>
+      <Text style={styles.checkboxLabel}>{permission.display_name}</Text>
+    </TouchableOpacity>
+  );
+
+  const CategoryHeader = ({ category, permissions }) => {
+    const allSelected = permissions.every(p => formData.permissions.includes(p.name));
+    const someSelected = permissions.some(p => formData.permissions.includes(p.name));
+    
+    return (
+      <TouchableOpacity 
+        style={styles.categoryHeader}
+        onPress={() => toggleCategoryPermissions(category)}
+      >
+        <View style={[
+          styles.categoryCheckbox, 
+          allSelected && styles.checkboxSelected,
+          someSelected && !allSelected && styles.checkboxIndeterminate
+        ]}>
+          {allSelected && <Text style={styles.checkboxIcon}>✓</Text>}
+          {someSelected && !allSelected && <Text style={styles.checkboxIcon}>-</Text>}
+        </View>
+        <Text style={styles.categoryTitle}>{category}</Text>
+        <Text style={styles.categoryCount}>
+          ({permissions.filter(p => formData.permissions.includes(p.name)).length}/{permissions.length})
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   const EmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyIcon}>📝</Text>
@@ -216,6 +323,8 @@ export default function RoleManagement() {
       </TouchableOpacity>
     </View>
   );
+
+  const permissionsByCategory = getPermissionsByCategory();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -340,6 +449,37 @@ export default function RoleManagement() {
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>
+                </View>
+
+                {/* Permissions Section */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Permissions</Text>
+                  <View style={styles.permissionsContainer}>
+                    {Object.entries(permissionsByCategory).map(([category, permissions]) => (
+                      <View key={category} style={styles.categorySection}>
+                        <CategoryHeader category={category} permissions={permissions} />
+                        <View style={styles.permissionsList}>
+                          {permissions.map(permission => (
+                            <CheckboxItem
+                              key={permission.id}
+                              permission={permission}
+                              isSelected={formData.permissions.includes(permission.name)}
+                              onToggle={togglePermission}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                  
+                  {/* Selected permissions summary */}
+                  {formData.permissions.length > 0 && (
+                    <View style={styles.selectedSummary}>
+                      <Text style={styles.selectedSummaryText}>
+                        {formData.permissions.length} permission{formData.permissions.length > 1 ? 's' : ''} terpilih
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
 
@@ -524,11 +664,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    marginBottom: 4,
   },
   roleText: {
     fontSize: 12,
     fontWeight: "600",
     color: "#FFFFFF",
+  },
+  permissionCount: {
+    fontSize: 12,
+    color: "#10B981",
+    fontWeight: "500",
   },
   actionButtons: {
     flexDirection: 'row',
@@ -653,6 +799,96 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     color: "#111827",
+  },
+  // Permissions Styles
+  permissionsContainer: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    padding: 16,
+  },
+  categorySection: {
+    marginBottom: 16,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  categoryCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#374151",
+    flex: 1,
+  },
+  categoryCount: {
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  permissionsList: {
+    marginLeft: 32,
+    marginTop: 8,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  checkboxSelected: {
+    backgroundColor: "#6366F1",
+    borderColor: "#6366F1",
+  },
+  checkboxIndeterminate: {
+    backgroundColor: "#9CA3AF",
+    borderColor: "#9CA3AF",
+  },
+  checkboxIcon: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: "#374151",
+    flex: 1,
+  },
+  selectedSummary: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: "#EEF2FF",
+    borderRadius: 8,
+  },
+  selectedSummaryText: {
+    fontSize: 14,
+    color: "#6366F1",
+    fontWeight: "500",
+    textAlign: 'center',
   },
   modalActions: {
     flexDirection: "row",

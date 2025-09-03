@@ -1,732 +1,665 @@
-import { useRouter } from 'expo-router';
-import React, { useContext, useEffect, useState } from 'react';
+import { useRouter } from "expo-router";
+import React, { useContext, useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
-} from 'react-native';
-import { AuthContext } from '../context/AuthContext';
-import api from './axios';
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../app/axios";
+import { AuthContext } from "../context/AuthContext";
 
-// Helper untuk handle URL foto
-const getPhotoUrl = (path) => {
-  if (!path) return 'https://via.placeholder.com/60/667eea/FFFFFF?text=U';
-  if (path.startsWith('http')) return path;
-  return `https://clear-gnat-certainly.ngrok-free.app/storage/${path}`;
-};
+const { width } = Dimensions.get("window");
+
+// Daftar roles yang tersedia
+const AVAILABLE_ROLES = [
+  { id: 1, name: "super-admin", display_name: "Super Admin" },
+  { id: 2, name: "admin", display_name: "Administrator" },
+  { id: 3, name: "manager", display_name: "Manager" },
+  { id: 4, name: "staff", display_name: "Staff" },
+  { id: 5, name: "user", display_name: "User" },
+];
 
 export default function UserManagement() {
   const router = useRouter();
   const { token } = useContext(AuthContext);
-
   const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
-  // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Form data
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    role_id: '',
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    password_confirmation: "",
+    roles: [], // Array untuk menyimpan selected roles
   });
 
-  const [errors, setErrors] = useState({});
+  const [stats, setStats] = useState({
+    totalUser: 0,
+    hasilPencarian: 0,
+  });
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get("/master/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const userData = res.data.data || res.data;
+      setUsers(userData);
+      setFilteredUsers(userData);
+      setStats({
+        totalUser: userData.length,
+        hasilPencarian: userData.length,
+      });
+    } catch (error) {
+      console.log(error.response?.data || error.message);
+      Alert.alert("Error", "Gagal memuat data user");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchUsers();
-    fetchRoles();
   }, []);
 
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get('/master/users', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      console.log("USERS RESPONSE:", response.data);
-
-      // Pastikan yang masuk ke state itu array
-      if (Array.isArray(response.data)) {
-        setUsers(response.data);
-      } else if (Array.isArray(response.data.data)) {
-        setUsers(response.data.data);
-      } else if (Array.isArray(response.data.users)) {
-        setUsers(response.data.users);
-      } else {
-        setUsers([]); // fallback biar aman
-      }
-    } catch (error) {
-      console.error('Gagal fetch users:', error.response?.data || error.message);
-      Alert.alert('Error', 'Gagal memuat data pengguna');
-      setUsers([]); // Set empty array on error
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+  const [availableRoles, setAvailableRoles] = useState([]);
 
   const fetchRoles = async () => {
     try {
       const res = await api.get("/master/roles", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("ROLES RESPONSE:", res.data);
-
-      // pastikan ambil arraynya
-      if (Array.isArray(res.data)) {
-        setRoles(res.data);
-      } else if (Array.isArray(res.data.data)) {
-        setRoles(res.data.data);
-      } else {
-        setRoles([]);
-      }
-    } catch (err) {
-      console.error("Gagal fetch roles:", err.response?.data || err.message);
-      Alert.alert("Error", "Gagal memuat data role");
-      setRoles([]); // Set empty array on error
+      // Sesuaikan dengan struktur respons API kamu
+      const rolesData = res.data.data || res.data;
+      setAvailableRoles(rolesData);
+    } catch (error) {
+      console.log(error.response?.data || error.message);
+      Alert.alert("Error", "Gagal memuat data roles");
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
+  useEffect(() => {
     fetchUsers();
-    fetchRoles();
-  };
+    fetchRoles(); // ambil roles juga
+  }, []);
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      password: '',
-      role_id: '',
-    });
-    setErrors({});
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Name validation
-    if (!formData.name.trim()) {
-      newErrors.name = 'Nama wajib diisi';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Nama minimal 2 karakter';
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredUsers(users);
+      setStats((prev) => ({ ...prev, hasilPencarian: users.length }));
+    } else {
+      const filtered = users.filter(
+        (user) =>
+          user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+      setStats((prev) => ({ ...prev, hasilPencarian: filtered.length }));
     }
+  }, [searchQuery, users]);
 
-    // Email validation
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email wajib diisi';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format email tidak valid';
-    }
-
-    // Phone validation (optional but if provided should be valid)
-    if (formData.phone && formData.phone.length < 10) {
-      newErrors.phone = 'Nomor telepon minimal 10 digit';
-    }
-
-    // Role validation
-    if (!formData.role_id) {
-      newErrors.role_id = 'Role wajib dipilih';
-    }
-    
-    // Password validation
-    if (showAddModal && !formData.password) {
-      newErrors.password = 'Password wajib diisi';
-    } else if (formData.password && formData.password.length < 6) {
-      newErrors.password = 'Password minimal 6 karakter';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUsers();
+    setRefreshing(false);
   };
 
   const handleAddUser = async () => {
-    if (!validateForm() || submitting) return;
-
-    setSubmitting(true);
-    try {
-      const response = await api.post('/master/users', formData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      // Handle different response structures
-      const newUser = response.data.user || response.data.data || response.data;
-      
-      setUsers(prevUsers => [...prevUsers, newUser]);
-      setShowAddModal(false);
-      resetForm();
-      Alert.alert('Berhasil', 'User berhasil ditambahkan!');
-    } catch (error) {
-      console.error('Gagal tambah user:', error.response?.data || error.message);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error ||
-                          'Gagal menambahkan user';
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setSubmitting(false);
+    if (!formData.name.trim() || !formData.email.trim()) {
+      Alert.alert("Error", "Nama dan Email wajib diisi");
+      return;
     }
-  };
 
-  const handleEditUser = async () => {
-    if (!validateForm() || submitting) return;
+    if (
+      !editingUser &&
+      (!formData.password || !formData.password_confirmation)
+    ) {
+      Alert.alert("Error", "Password dan Konfirmasi Password wajib diisi");
+      return;
+    }
+
+    if (!editingUser && formData.password !== formData.password_confirmation) {
+      Alert.alert("Error", "Password dan Konfirmasi Password tidak cocok");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const updateData = { ...formData };
-      // Hapus password dari data jika kosong
-      if (!updateData.password) {
-        delete updateData.password;
+      // Prepare data with roles
+      const submitData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        roles: formData.roles,
+      };
+
+      // Add password only for new users or when updating password
+      if (!editingUser || formData.password) {
+        submitData.password = formData.password;
+        submitData.password_confirmation = formData.password_confirmation;
       }
 
-      const response = await api.put(`/master/users/${selectedUser.id}`, updateData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (editingUser) {
+        const res = await api.put(
+          `/master/users/${editingUser.id}`,
+          submitData,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const updatedUser = res.data.user || res.data.data || res.data;
+        setUsers((prev) =>
+          prev.map((user) => (user.id === editingUser.id ? updatedUser : user))
+        );
+        Alert.alert("Berhasil", "User berhasil diperbarui!");
+      } else {
+        const res = await api.post("/master/users/store", submitData, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const newUser = res.data.user || res.data.data || res.data;
+        setUsers((prev) => [...prev, newUser]);
+        Alert.alert("Berhasil", "User berhasil ditambahkan!");
+      }
 
-      // Handle different response structures
-      const updatedUser = response.data.user || response.data.data || response.data;
-      
-      const updatedUsers = users.map(user => 
-        user.id === selectedUser.id ? updatedUser : user
+      setShowModal(false);
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        password_confirmation: "",
+        roles: [],
+      });
+      setEditingUser(null);
+    } catch (error) {
+      console.log(error.response?.data || error.message);
+      Alert.alert(
+        "Error",
+        editingUser ? "Gagal memperbarui user" : "Gagal menambahkan user"
       );
-      setUsers(updatedUsers);
-      setShowEditModal(false);
-      resetForm();
-      setSelectedUser(null);
-      Alert.alert('Berhasil', 'User berhasil diperbarui!');
-    } catch (error) {
-      console.error('Gagal update user:', error.response?.data || error.message);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error ||
-                          'Gagal memperbarui user';
-      Alert.alert('Error', errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteUser = async () => {
-    if (submitting) return;
-    
-    setSubmitting(true);
-    try {
-      await api.delete(`/master/users/${selectedUser.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const updatedUsers = users.filter(user => user.id !== selectedUser.id);
-      setUsers(updatedUsers);
-      setShowDeleteModal(false);
-      setSelectedUser(null);
-      Alert.alert('Berhasil', 'User berhasil dihapus!');
-    } catch (error) {
-      console.error('Gagal hapus user:', error.response?.data || error.message);
-      const errorMessage = error.response?.data?.message || 
-                          error.response?.data?.error ||
-                          'Gagal menghapus user';
-      Alert.alert('Error', errorMessage);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const openEditModal = (user) => {
-    setSelectedUser(user);
+  const handleEditUser = (user) => {
+    setEditingUser(user);
     setFormData({
-      name: user.name || '',
-      email: user.email || '',
-      phone: user.phone || '',
-      password: '',
-      role_id: user.role_id?.toString() || user.role?.id?.toString() || '',
+      name: user.name,
+      email: user.email,
+      phone: user.phone || "",
+      password: "",
+      password_confirmation: "",
+      roles: user.roles?.map((role) => role.name) || [], // Load existing roles
     });
-    setErrors({});
-    setShowEditModal(true);
+    setShowModal(true);
   };
 
-  const openDeleteModal = (user) => {
-    setSelectedUser(user);
-    setShowDeleteModal(true);
-  };
-
-  // Safe filtering
-  const filteredUsers = users.filter(u => {
-    if (!u) return false;
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      (u.name && u.name.toLowerCase().includes(searchLower)) ||
-      (u.email && u.email.toLowerCase().includes(searchLower)) ||
-      (u.role?.name && u.role.name.toLowerCase().includes(searchLower))
+  const handleDeleteUser = (user) => {
+    Alert.alert(
+      "Konfirmasi Hapus",
+      `Apakah Anda yakin ingin menghapus user "${user.name}"?`,
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.delete(`/master/users/${user.id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              setUsers((prev) => prev.filter((u) => u.id !== user.id));
+              Alert.alert("Berhasil", "User berhasil dihapus!");
+            } catch (error) {
+              console.log(error.response?.data || error.message);
+              Alert.alert("Error", "Gagal menghapus user");
+            }
+          },
+        },
+      ]
     );
-  });
+  };
 
-  const UserCard = ({ item }) => {
-    if (!item) return null;
-    
-    return (
-      <View style={styles.userCard}>
+  const closeModal = () => {
+    setShowModal(false);
+    setFormData({
+      name: "",
+      email: "",
+      phone: "",
+      password: "",
+      password_confirmation: "",
+      roles: [],
+    });
+    setEditingUser(null);
+  };
+
+  // Toggle role selection
+  const toggleRole = (roleName) => {
+    setFormData((prev) => ({
+      ...prev,
+      roles: prev.roles.includes(roleName)
+        ? prev.roles.filter((r) => r !== roleName)
+        : [...prev.roles, roleName],
+    }));
+  };
+
+  const UserCard = ({ item, index }) => (
+    <View style={[styles.userCard, { marginTop: index === 0 ? 16 : 8 }]}>
+      <View style={styles.userHeader}>
         <View style={styles.userInfo}>
-          <Image 
-            source={{ uri: getPhotoUrl(item.photo) }} 
-            style={styles.userAvatar}
-            defaultSource={{ uri: 'https://via.placeholder.com/60/667eea/FFFFFF?text=U' }}
-          />
-          <View style={styles.userDetails}>
-            <Text style={styles.userName}>{item.name || 'No Name'}</Text>
-            <Text style={styles.userEmail}>{item.email || 'No Email'}</Text>
-            {item.phone && (
-              <Text style={styles.userPhone}>{item.phone}</Text>
+          <Text style={styles.userName}>{item.name}</Text>
+          <Text style={styles.userEmail}>{item.email}</Text>
+          <Text style={styles.userPhone}>
+            {item.phone || `081234567${89 + index}`}
+          </Text>
+          <View style={styles.rolesContainer}>
+            {item.roles && item.roles.length > 0 ? (
+              item.roles.slice(0, 2).map((role, roleIndex) => (
+                <Text key={roleIndex} style={styles.roleTag}>
+                  {(role.display_name || role.name).length > 5
+                    ? (role.display_name || role.name).substring(0, 5) + ".."
+                    : role.display_name || role.name}
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.roleTag}>No Role</Text>
             )}
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{item.role?.name || 'No Role'}</Text>
-            </View>
+            {item.roles && item.roles.length > 2 && (
+              <Text style={[styles.roleTag, { backgroundColor: "#9CA3AF" }]}>
+                +{item.roles.length - 2}
+              </Text>
+            )}
           </View>
+          {/* Show role count */}
+          <Text style={styles.roleCount}>
+            {item.roles?.length || 0} Role
+            {(item.roles?.length || 0) > 1 ? "s" : ""}
+          </Text>
         </View>
-        <View style={styles.userActions}>
+        <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.editBtn]}
-            onPress={() => openEditModal(item)}
-            activeOpacity={0.7}
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => handleEditUser(item)}
           >
-            <Text style={styles.actionIcon}>✏️</Text>
+            <Text style={styles.actionButtonText}>✏️</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={() => openDeleteModal(item)}
-            activeOpacity={0.7}
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => handleDeleteUser(item)}
           >
-            <Text style={styles.actionIcon}>🗑️</Text>
+            <Text style={styles.actionButtonText}>🗑️</Text>
           </TouchableOpacity>
         </View>
       </View>
-    );
-  };
-
-  const FormModal = ({ visible, onClose, onSubmit, title, isEdit = false }) => (
-    <Modal 
-      visible={visible} 
-      animationType="slide" 
-      transparent
-      statusBarTranslucent
-    >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.modalOverlay}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{title}</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Text style={styles.closeIcon}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView 
-            style={styles.formScrollView}
-            contentContainerStyle={styles.formContainer}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Nama */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nama Lengkap *</Text>
-              <TextInput
-                style={[styles.input, errors.name && styles.inputError]}
-                value={formData.name}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, name: text });
-                  if (errors.name) {
-                    setErrors({ ...errors, name: null });
-                  }
-                }}
-                placeholder="Masukkan nama lengkap"
-                autoCapitalize="words"
-              />
-              {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-            </View>
-
-            {/* Email */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email *</Text>
-              <TextInput
-                style={[styles.input, errors.email && styles.inputError]}
-                value={formData.email}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, email: text.toLowerCase() });
-                  if (errors.email) {
-                    setErrors({ ...errors, email: null });
-                  }
-                }}
-                placeholder="Masukkan email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoComplete="email"
-              />
-              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-            </View>
-
-            {/* Phone */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>No. Telepon</Text>
-              <TextInput
-                style={[styles.input, errors.phone && styles.inputError]}
-                value={formData.phone}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, phone: text });
-                  if (errors.phone) {
-                    setErrors({ ...errors, phone: null });
-                  }
-                }}
-                placeholder="Masukkan nomor telepon"
-                keyboardType="phone-pad"
-                autoComplete="tel"
-              />
-              {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
-            </View>
-
-            {/* Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>
-                Password {isEdit ? '(Kosongkan jika tidak ingin mengubah)' : '*'}
-              </Text>
-              <TextInput
-                style={[styles.input, errors.password && styles.inputError]}
-                value={formData.password}
-                onChangeText={(text) => {
-                  setFormData({ ...formData, password: text });
-                  if (errors.password) {
-                    setErrors({ ...errors, password: null });
-                  }
-                }}
-                placeholder={isEdit ? "Masukkan password baru" : "Masukkan password"}
-                secureTextEntry
-                autoComplete="password"
-              />
-              {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
-            </View>
-
-            {/* Role */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Role *</Text>
-              <View style={styles.roleSelector}>
-                {roles.length > 0 ? (
-                  roles.map((role) => (
-                    <TouchableOpacity
-                      key={role.id}
-                      style={[
-                        styles.roleOption,
-                        formData.role_id === role.id.toString() && styles.roleOptionSelected
-                      ]}
-                      onPress={() => {
-                        setFormData({ ...formData, role_id: role.id.toString() });
-                        if (errors.role_id) {
-                          setErrors({ ...errors, role_id: null });
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.roleOptionText,
-                        formData.role_id === role.id.toString() && styles.roleOptionTextSelected
-                      ]}>
-                        {role.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <Text style={styles.noRolesText}>Tidak ada role tersedia</Text>
-                )}
-              </View>
-              {errors.role_id && <Text style={styles.errorText}>{errors.role_id}</Text>}
-            </View>
-          </ScrollView>
-
-          <View style={styles.modalActions}>
-            <TouchableOpacity 
-              style={styles.cancelBtn} 
-              onPress={onClose}
-              disabled={submitting}
-            >
-              <Text style={styles.cancelBtnText}>Batal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.submitBtn, submitting && styles.submitBtnDisabled]} 
-              onPress={onSubmit}
-              disabled={submitting}
-            >
-              <Text style={styles.submitBtnText}>
-                {submitting ? 'Menyimpan...' : (isEdit ? 'Perbarui' : 'Tambah')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>⏳ Memuat data pengguna...</Text>
+  const CheckboxItem = ({ role, isSelected, onToggle }) => (
+    <TouchableOpacity
+      style={styles.checkboxContainer}
+      onPress={() => onToggle(role.name)}
+    >
+      <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+        {isSelected && <Text style={styles.checkboxIcon}>✓</Text>}
       </View>
-    );
-  }
+      <Text style={styles.checkboxLabel}>{role.display_name}</Text>
+    </TouchableOpacity>
+  );
+
+  const EmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyIcon}>👥</Text>
+      <Text style={styles.emptyTitle}>Belum Ada User</Text>
+      <Text style={styles.emptySubtitle}>
+        Mulai dengan menambahkan user pertama Anda
+      </Text>
+      <TouchableOpacity
+        style={styles.emptyButton}
+        onPress={() => setShowModal(true)}
+      >
+        <Text style={styles.emptyButtonText}>Tambah User</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Kelola User</Text>
-          <TouchableOpacity
-            onPress={() => {
-              resetForm();
-              setShowAddModal(true);
-            }}
-            style={styles.addButton}
-          >
-            <Text style={styles.addIcon}>+</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButton}
+        >
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Kelola User</Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => setShowModal(true)}
+        >
+          <Text style={styles.addButtonText}>+</Text>
+        </TouchableOpacity>
+      </View>
 
-        {/* Search */}
-        <View style={styles.searchContainer}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
           <Text style={styles.searchIcon}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Cari nama, email, atau role..."
+            placeholder="Cari nama, email, atau nomor telepon..."
+            placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={styles.clearSearchIcon}>✕</Text>
-            </TouchableOpacity>
-          )}
         </View>
+      </View>
 
-        {/* Stats */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{users.length}</Text>
-            <Text style={styles.statLabel}>Total User</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{filteredUsers.length}</Text>
-            <Text style={styles.statLabel}>Hasil Pencarian</Text>
-          </View>
+      {/* Stats */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{stats.totalUser}</Text>
+          <Text style={styles.statLabel}>Total User</Text>
+        </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{stats.hasilPencarian}</Text>
+          <Text style={styles.statLabel}>Hasil Pencarian</Text>
         </View>
       </View>
 
       {/* User List */}
-      <FlatList
-        data={filteredUsers}
-       keyExtractor={(item, index) => item?.id?.toString() || `user-${index}`}
-        renderItem={UserCard}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>👥</Text>
-            <Text style={styles.emptyTitle}>
-              {searchQuery ? 'Tidak Ada Hasil' : 'Tidak Ada User'}
-            </Text>
-            <Text style={styles.emptyMessage}>
-              {searchQuery 
-                ? 'Tidak ada user yang sesuai dengan pencarian' 
-                : 'Belum ada user yang terdaftar'
-              }
-            </Text>
-            {!searchQuery && (
-              <TouchableOpacity
-                style={styles.emptyActionBtn}
-                onPress={() => {
-                  resetForm();
-                  setShowAddModal(true);
-                }}
-              >
-                <Text style={styles.emptyActionText}>Tambah User Pertama</Text>
-              </TouchableOpacity>
-            )}
+      <View style={styles.content}>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <Text style={styles.loadingText}>Memuat data...</Text>
           </View>
-        }
-      />
+        ) : (
+          <FlatList
+            data={filteredUsers}
+            keyExtractor={(item, index) => `${item?.id ?? "user"}-${index}`}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={["#6366F1"]}
+                tintColor="#6366F1"
+              />
+            }
+            renderItem={({ item, index }) => (
+              <UserCard item={item} index={index} />
+            )}
+            ListEmptyComponent={<EmptyState />}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+        )}
+      </View>
 
-      {/* Add Modal */}
-      <FormModal
-        visible={showAddModal}
-        onClose={() => {
-          setShowAddModal(false);
-          resetForm();
-        }}
-        onSubmit={handleAddUser}
-        title="Tambah User Baru"
-      />
-
-      {/* Edit Modal */}
-      <FormModal
-        visible={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          resetForm();
-          setSelectedUser(null);
-        }}
-        onSubmit={handleEditUser}
-        title="Edit User"
-        isEdit
-      />
-
-      {/* Delete Confirmation Modal */}
-      <Modal visible={showDeleteModal} animationType="fade" transparent>
+      {/* Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showModal}
+        onRequestClose={closeModal}
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <View style={styles.deleteModalHeader}>
-              <View style={styles.deleteIconCircle}>
-                <Text style={styles.deleteModalIcon}>⚠️</Text>
+          <View style={styles.modalContainer}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>
+                    {editingUser ? "Edit User" : "Tambah User Baru"}
+                  </Text>
+                  <Text style={styles.modalSubtitle}>
+                    {editingUser
+                      ? "Perbarui informasi user"
+                      : "Isi informasi user dengan lengkap"}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={closeModal}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
               </View>
-            </View>
-            
-            <View style={styles.deleteModalContent}>
-              <Text style={styles.deleteModalTitle}>Hapus User?</Text>
-              <Text style={styles.deleteModalMessage}>
-                Yakin ingin menghapus user "{selectedUser?.name}"? 
-                Tindakan ini tidak dapat dibatalkan.
-              </Text>
-            </View>
-            
-            <View style={styles.deleteModalActions}>
-              <TouchableOpacity
-                style={styles.cancelDeleteBtn}
-                onPress={() => {
-                  setShowDeleteModal(false);
-                  setSelectedUser(null);
-                }}
-                disabled={submitting}
-              >
-                <Text style={styles.cancelDeleteText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.confirmDeleteBtn, submitting && styles.confirmDeleteBtnDisabled]}
-                onPress={handleDeleteUser}
-                disabled={submitting}
-              >
-                <Text style={styles.confirmDeleteText}>
-                  {submitting ? 'Menghapus...' : 'Hapus'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+
+              <View style={styles.formContainer}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nama Lengkap *</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.name}
+                      onChangeText={(t) =>
+                        setFormData({ ...formData, name: t })
+                      }
+                      placeholder="contoh: John Doe"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email *</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.email}
+                      onChangeText={(t) =>
+                        setFormData({ ...formData, email: t })
+                      }
+                      placeholder="contoh: john@example.com"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nomor Telepon</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.phone}
+                      onChangeText={(t) =>
+                        setFormData({ ...formData, phone: t })
+                      }
+                      placeholder="contoh: 081234567890"
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    Password{" "}
+                    {!editingUser
+                      ? "*"
+                      : "(kosongkan jika tidak ingin mengubah)"}
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.password}
+                      onChangeText={(t) =>
+                        setFormData({ ...formData, password: t })
+                      }
+                      placeholder="Masukkan password"
+                      placeholderTextColor="#9CA3AF"
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>
+                    Konfirmasi Password {!editingUser ? "*" : ""}
+                  </Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.password_confirmation}
+                      onChangeText={(t) =>
+                        setFormData({ ...formData, password_confirmation: t })
+                      }
+                      placeholder="Ulangi password"
+                      placeholderTextColor="#9CA3AF"
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+
+                {/* Roles Section */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Roles</Text>
+                  <View style={styles.rolesContainer}>
+                    {availableRoles.map((role) => (
+                      <CheckboxItem
+                        key={role.id}
+                        role={{ name: role.name, display_name: role.full_name }}
+                        isSelected={formData.roles.includes(role.name)}
+                        onToggle={toggleRole}
+                      />
+                    ))}
+                  </View>
+
+                  {/* Selected roles summary */}
+                  {formData.roles.length > 0 && (
+                    <View style={styles.selectedSummary}>
+                      <Text style={styles.selectedSummaryText}>
+                        {formData.roles.length} role
+                        {formData.roles.length > 1 ? "s" : ""} terpilih
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={closeModal}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cancelButtonText}>Batal</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.saveButton,
+                    submitting && styles.disabledButton,
+                  ]}
+                  onPress={handleAddUser}
+                  disabled={submitting}
+                  activeOpacity={0.8}
+                >
+                  {submitting && (
+                    <ActivityIndicator
+                      size="small"
+                      color="#fff"
+                      style={{ marginRight: 8 }}
+                    />
+                  )}
+                  <Text style={styles.saveButtonText}>
+                    {submitting
+                      ? editingUser
+                        ? "Memperbarui..."
+                        : "Menyimpan..."
+                      : editingUser
+                      ? "Perbarui"
+                      : "Simpan"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#F8FAFC",
   },
-
-  // Loading
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: '#64748b',
-    fontWeight: '500',
-  },
-
-  // Header
   header: {
-    backgroundColor: '#ffffff',
-    paddingTop: 50,
-    paddingBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    paddingVertical: 16,
+    backgroundColor: "#FFFFFF",
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#dc3545',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
   },
   backIcon: {
     fontSize: 20,
-    color: '#ffffff',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontWeight: "700",
+    color: "#111827",
   },
   addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#10b981',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#10B981",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  addIcon: {
+  addButtonText: {
     fontSize: 24,
-    color: '#ffffff',
-    fontWeight: 'bold',
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
-
-  // Search
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: "#FFFFFF",
+  },
+  searchInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginBottom: 16,
   },
   searchIcon: {
     fontSize: 16,
@@ -735,377 +668,324 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1e293b',
+    color: "#111827",
   },
-  clearSearchIcon: {
-    fontSize: 14,
-    color: '#64748b',
-    marginLeft: 8,
-  },
-
-  // Stats
   statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 20,
+    marginVertical: 10,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
   },
-  statCard: {
+  statItem: {
     flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#667eea',
+    fontSize: 32,
+    fontWeight: "800",
+    color: "#6366F1",
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    fontWeight: '500',
+    fontSize: 14,
+    color: "#6B7280",
+    fontWeight: "500",
   },
-
-  // List
-  listContainer: {
-    padding: 20,
-    flexGrow: 1,
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: 60,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6B7280",
   },
   userCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: "#FFFFFF",
     marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    borderRadius: 16,
+    shadowColor: "#000",
     shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
+  },
+  userHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
   },
   userInfo: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  userAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#e2e8f0',
-    marginRight: 12,
-  },
-  userDetails: {
-    flex: 1,
   },
   userName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#6B7280",
     marginBottom: 2,
   },
   userPhone: {
-    fontSize: 12,
-    color: '#94a3b8',
-    marginBottom: 6,
+    fontSize: 14,
+    color: "#6B7280",
+    marginBottom: 8,
   },
-  roleBadge: {
-    backgroundColor: '#e0e7ff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
+  // rolesContainer: {
+  //   flexDirection: 'row',
+  //   flexWrap: 'wrap',
+  //   marginBottom: 4,
+  //   gap: 3,
+  // },
+  roleTag: {
+    backgroundColor: "#6366F1",
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+    maxWidth: 60,
+    fontSize: 9,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
+    overflow: "hidden",
   },
   roleText: {
-    fontSize: 12,
-    color: '#3730a3',
-    fontWeight: '500',
+    fontSize: 9,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-  userActions: {
-    flexDirection: 'row',
+  // roleCount: {
+  //   fontSize: 12,
+  //   color: "#10B981",
+  //   fontWeight: "500",
+  // },
+  actionButtons: {
+    flexDirection: "row",
     gap: 8,
   },
-  actionBtn: {
+  actionButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
-  editBtn: {
-    backgroundColor: '#dbeafe',
+  editButton: {
+    backgroundColor: "#F0F9FF",
+    borderWidth: 1,
+    borderColor: "#0EA5E9",
   },
-  deleteBtn: {
-    backgroundColor: '#fee2e2',
+  deleteButton: {
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#EF4444",
   },
-  actionIcon: {
+  actionButtonText: {
     fontSize: 14,
   },
-
-  // Empty State
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    paddingTop: 60,
   },
   emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: 64,
+    marginBottom: 24,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 8,
+    textAlign: "center",
   },
-  emptyMessage: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 20,
+  emptySubtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 32,
   },
-  emptyActionBtn: {
-    backgroundColor: '#667eea',
+  emptyButton: {
+    backgroundColor: "#6366F1",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
   },
-  emptyActionText: {
-    color: '#ffffff',
-    fontWeight: '600',
+  emptyButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#FFFFFF",
   },
-
-  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
   },
   modalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '90%',
+    backgroundColor: "#FFFFFF",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#F3F4F6",
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontSize: 24,
+    fontWeight: "800",
+    color: "#111827",
+    marginBottom: 4,
   },
-  closeBtn: {
+  modalSubtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+  },
+  closeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  closeIcon: {
+  closeButtonText: {
     fontSize: 16,
-    color: '#64748b',
-  },
-
-  // Form
-  formScrollView: {
-    maxHeight: 400,
+    color: "#6B7280",
+    fontWeight: "600",
   },
   formContainer: {
-    padding: 20,
+    padding: 24,
   },
-  inputContainer: {
-    marginBottom: 16,
+  inputGroup: {
+    marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
     marginBottom: 8,
+  },
+  inputWrapper: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
     fontSize: 16,
-    color: '#1e293b',
-    backgroundColor: '#ffffff',
+    color: "#111827",
   },
-  inputError: {
-    borderColor: '#ef4444',
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#ef4444',
-    marginTop: 4,
-  },
-
-  // Role Selector
-  roleSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  roleOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    backgroundColor: '#ffffff',
-  },
-  roleOptionSelected: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
-  },
-  roleOptionText: {
-    fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  roleOptionTextSelected: {
-    color: '#ffffff',
-  },
-  noRolesText: {
-    fontSize: 14,
-    color: '#64748b',
-    fontStyle: 'italic',
-    textAlign: 'center',
+  // Roles Styles
+  rolesContainer: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
     padding: 16,
   },
-
-  // Modal Actions
+  checkboxContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  checkboxSelected: {
+    backgroundColor: "#6366F1",
+    borderColor: "#6366F1",
+  },
+  checkboxIcon: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  checkboxLabel: {
+    fontSize: 15,
+    color: "#374151",
+    flex: 1,
+  },
+  selectedSummary: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: "#EEF2FF",
+    borderRadius: 8,
+  },
+  selectedSummaryText: {
+    fontSize: 14,
+    color: "#6366F1",
+    fontWeight: "500",
+    textAlign: "center",
+  },
   modalActions: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  submitBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#667eea',
-    alignItems: 'center',
-  },
-  submitBtnDisabled: {
-    backgroundColor: '#94a3b8',
-  },
-  submitBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-
-  // Delete Modal
-  deleteModalContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    width: '100%',
-    maxWidth: 360,
-    overflow: 'hidden',
-  },
-  deleteModalHeader: {
-    alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 20,
-    backgroundColor: '#f8fafc',
-  },
-  deleteIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ef4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalIcon: {
-    fontSize: 36,
-  },
-  deleteModalContent: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     paddingHorizontal: 24,
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  deleteModalTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1e293b',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingBottom: 24,
     gap: 12,
-    backgroundColor: '#f8fafc',
   },
-  cancelDeleteBtn: {
+  cancelButton: {
     flex: 1,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
   },
-  cancelDeleteText: {
+  cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: "600",
+    color: "#6B7280",
   },
-  confirmDeleteBtn: {
+  saveButton: {
     flex: 1,
-    backgroundColor: '#ef4444',
-    borderRadius: 16,
     paddingVertical: 16,
-    alignItems: 'center',
+    borderRadius: 12,
+    backgroundColor: "#6366F1",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  confirmDeleteBtnDisabled: {
-    backgroundColor: '#fca5a5',
-  },
-  confirmDeleteText: {
+  saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff',
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });
