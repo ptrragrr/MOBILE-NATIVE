@@ -41,6 +41,7 @@ const Dashboard = () => {
   const [todaySales, setTodaySales] = useState(0);
   const [monthlySales, setMonthlySales] = useState(0);
   const [totalProducts, setTotalProducts] = useState(0);
+  // const [totalProducts, setTotalProdu55cts] = useState(0);
   const [salesHistory, setSalesHistory] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTrx, setSelectedTrx] = useState<Transaction | null>(null);
@@ -74,7 +75,12 @@ const Dashboard = () => {
       })),
     }));
 
-    setSalesHistory(mapped);
+    // Sort by newest first (berdasarkan created_at)
+    const sortedMapped = mapped.sort((a: any, b: any) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    setSalesHistory(sortedMapped);
 
     // Hitung penjualan hari ini
     const today = new Date();
@@ -126,6 +132,9 @@ setTodaySales(todayTotal);
   useEffect(() => {
     fetchHistory();
   }, []);
+
+  // Ambil hanya 5 transaksi terbaru untuk ditampilkan di dashboard
+  const recentTransactions = salesHistory.slice(0, 3);
 
   return (
     <View style={styles.container}>
@@ -191,80 +200,63 @@ setTodaySales(todayTotal);
             {/* History Section */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Riwayat Transaksi</Text>
+                <Text style={styles.sectionTitle}>Transaksi Terbaru</Text>
                 <TouchableOpacity 
                   style={styles.viewAllButton}
                   onPress={() => router.push('/history')}
                 >
-                  <Text style={styles.viewAllText}>Lihat Semua</Text>
+                  <Text style={styles.viewAllText}>
+                    Lihat Semua {salesHistory.length > 5 && `(${salesHistory.length})`}
+                  </Text>
                 </TouchableOpacity>
               </View>
 
-              {salesHistory.length === 0 ? (
+              {recentTransactions.length === 0 ? (
                 <View style={styles.emptyState}>
                   <Text style={styles.emptyIcon}>📋</Text>
                   <Text style={styles.emptyText}>Belum ada transaksi</Text>
                 </View>
-              ) : ( <View style={styles.historyList}>
-              {salesHistory.map((trx) => (
-                <TouchableOpacity
-                  key={trx.id}
-                  style={styles.transactionCard}
-                  onPress={() => {
-                    setSelectedTrx(trx);
-                    setShowModal(true);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.cardHeader}>
-                    <View style={styles.cardInfo}>
-                      <Text style={styles.kasirName}>{trx.kasir}</Text>
-                      <Text style={styles.transactionDate}>
-                        {trx.date} • {trx.time}
-                      </Text>
-                      <Text style={styles.transactionCode}>{trx.kode}</Text>
-                    </View>
-                    <View style={styles.amountContainer}>
-                      <Text style={styles.amount}>{formatRupiah(trx.amount)}</Text>
-                      <Text style={styles.viewDetail}>Lihat Detail →</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-                // <View style={styles.historyList}>
-                //   {salesHistory.slice(0, 5).map((transaction, index) => (
-                //     <TouchableOpacity 
-                //       key={transaction.id || index} 
-                //       style={styles.historyCard}
-                //       onPress={() => {
-                //         setSelectedTrx(transaction);
-                //         setShowModal(true);
-                //       }}
-                //     >
-                //       <View style={styles.historyLeft}>
-                //         <View style={styles.transactionIcon}>
-                //           <Text style={styles.iconTextSmall}>🧾</Text>
-                //         </View>
-                //         <View style={styles.historyInfo}>
-                //           <Text style={styles.historyKasir}>
-                //             {transaction.kasir || 'Unknown'}
-                //           </Text>
-                //           <Text style={styles.historyDate}>
-                //             {transaction.date} • {transaction.time}
-                //           </Text>
-                //         </View>
-                //       </View>
-                //       <View style={styles.historyRight}>
-                //         <Text style={styles.historyAmount}>
-                //           {formatRupiah(transaction.amount)}
-                //         </Text>
-                //         <Text style={styles.tapToView}>Lihat Detail →</Text>
-                //       </View>
-                //     </TouchableOpacity>
-                //   ))}
-                // </View>
+              ) : (
+                <View style={styles.historyList}>
+                  {recentTransactions.map((trx) => (
+                    <TouchableOpacity
+                      key={trx.id}
+                      style={styles.transactionCard}
+                      onPress={() => {
+                        setSelectedTrx(trx);
+                        setShowModal(true);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.cardHeader}>
+                        <View style={styles.cardInfo}>
+                          <Text style={styles.kasirName}>{trx.kasir}</Text>
+                          <Text style={styles.transactionDate}>
+                            {trx.date} • {trx.time}
+                          </Text>
+                          <Text style={styles.transactionCode}>{trx.kode}</Text>
+                        </View>
+                        <View style={styles.amountContainer}>
+                          <Text style={styles.amount}>{formatRupiah(trx.amount)}</Text>
+                          <Text style={styles.viewDetail}>Lihat Detail →</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               )}
+
+              {/* Show "View More" indicator if there are more than 5 transactions */}
+              {/* {salesHistory.length > 5 && (
+                <TouchableOpacity 
+                  style={styles.viewMoreButton}
+                  onPress={() => router.push('/history')}
+                >
+                  <Text style={styles.viewMoreText}>
+                    Lihat {salesHistory.length - 3} transaksi lainnya...
+                  </Text>
+                </TouchableOpacity>
+              )} */}
             </View>
           </>
         )}
@@ -522,7 +514,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     paddingHorizontal: 10,
   },
-historyList: {
+  historyList: {
     gap: 12,
   },
   transactionCard: {
@@ -573,6 +565,24 @@ historyList: {
     fontSize: 12,
     color: "#3b82f6",
     fontWeight: "500",
+  },
+
+  // View More Button
+  viewMoreButton: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginTop: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    borderStyle: 'dashed',
+  },
+  viewMoreText: {
+    fontSize: 14,
+    color: '#6c757d',
+    fontWeight: '500',
   },
 
   // Modal Styles
@@ -670,7 +680,7 @@ historyList: {
   itemsSection: {
     marginBottom: 24,
   },
-  sectionTitle: {
+  sectionTitleModal: {
     fontSize: 16,
     fontWeight: "600",
     color: "#1e293b",

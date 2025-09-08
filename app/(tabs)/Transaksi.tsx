@@ -820,11 +820,11 @@ const Transaksi: React.FC = () => {
 
             {/* Actions */}
             <View style={styles.receiptActions}>
-              <TouchableOpacity style={styles.shareButton} onPress={handleSaveSharePDF}>
+              {/* <TouchableOpacity style={styles.shareButton} onPress={handleSaveSharePDF}>
                 <Text style={styles.shareButtonText}>
                   {Platform.OS === 'ios' ? 'Simpan/Bagikan PDF' : 'Simpan/Bagikan PDF'}
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               <TouchableOpacity style={styles.newTransactionButton} onPress={handlePrint}>
                 <Text style={styles.newTransactionButtonText}>
                   {Platform.OS === 'ios' ? 'Cetak' : 'Cetak'}

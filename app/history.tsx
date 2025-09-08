@@ -23,13 +23,38 @@ const formatRupiah = (angka: number) =>
     minimumFractionDigits: 0,
   }).format(angka);
 
+// Data bulan dan tahun
+const MONTHS = [
+  { value: 0, label: "Januari" },
+  { value: 1, label: "Februari" },
+  { value: 2, label: "Maret" },
+  { value: 3, label: "April" },
+  { value: 4, label: "Mei" },
+  { value: 5, label: "Juni" },
+  { value: 6, label: "Juli" },
+  { value: 7, label: "Agustus" },
+  { value: 8, label: "September" },
+  { value: 9, label: "Oktober" },
+  { value: 10, label: "November" },
+  { value: 11, label: "Desember" },
+];
+
+const YEARS = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+
 export default function HistoryScreen() {
   const { userInfo } = useContext(AuthContext);
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [salesHistory, setSalesHistory] = useState<any[]>([]);
-  const [selectedTrx, setSelectedTrx] = useState<any | null>(null); // transaksi dipilih
+  const [allSalesHistory, setAllSalesHistory] = useState<any[]>([]);
+  const [filteredSalesHistory, setFilteredSalesHistory] = useState<any[]>([]);
+  const [selectedTrx, setSelectedTrx] = useState<any | null>(null);
   const [showModal, setShowModal] = useState(false);
+  
+  // Filter states
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [filterApplied, setFilterApplied] = useState(false);
 
   const fetchHistory = async () => {
     try {
@@ -48,108 +73,138 @@ export default function HistoryScreen() {
         amount: Number(item.total_transaksi) || 0,
         date: new Date(item.created_at).toLocaleDateString("id-ID"),
         time: new Date(item.created_at).toLocaleTimeString("id-ID"),
+        fullDate: new Date(item.created_at), // Tambahkan full date untuk filter
         barang: (item.details || []).map((d: any) => ({
-        nama: d.barang?.nama_barang || "-",
-        qty: d.jumlah,
-        harga: Number(d.harga_satuan) || 0,
-        subtotal: Number(d.total_harga) || 0,
-      })),
+          nama: d.barang?.nama_barang || "-",
+          qty: d.jumlah,
+          harga: Number(d.harga_satuan) || 0,
+          subtotal: Number(d.total_harga) || 0,
+        })),
       }));
+      
       console.log("MAPPED HISTORY:", JSON.stringify(mapped, null, 2));
-      setSalesHistory(mapped);
+      setAllSalesHistory(mapped);
+      setFilteredSalesHistory(mapped); // Default tampilkan semua
     } catch (err) {
       console.error("Gagal memuat history:", err);
     } finally {
       setLoading(false);
     }
-    
   };
 
-// Tambahkan fungsi ini
-const generatePdfAll = async (history: any[]) => {
-  if (!history || history.length === 0) {
-    alert("Tidak ada transaksi untuk diunduh");
-    return;
-  }
+  // Function to filter data by month and year
+  const applyFilter = () => {
+    const filtered = allSalesHistory.filter((trx) => {
+      const trxDate = trx.fullDate;
+      return (
+        trxDate.getMonth() === selectedMonth &&
+        trxDate.getFullYear() === selectedYear
+      );
+    });
+    
+    setFilteredSalesHistory(filtered);
+    setFilterApplied(true);
+    setShowFilterModal(false);
+  };
 
-  try {
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            h1 { font-size: 18px; text-align: center; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; text-align: left; vertical-align: top; }
-            th { background: #f1f5f9; }
-          </style>
-        </head>
-        <body>
-          <h1>Laporan Semua Transaksi</h1>
-          <table>
-            <tr>
-              <th>Kode</th>
-              <th>Kasir</th>
-              <th>Nama Barang</th>
-              <th>Metode</th>
-              <th>Tanggal</th>
-              <th>Harga Satuan</th>
-              <th>Qty</th>
-              <th>Total</th>
-            </tr>
-            ${history.map(trx => `
-              <tr>
-                <td>${trx.kode}</td>
-                <td>${trx.kasir}</td>
-                <td>
-                  ${trx.barang.map((b: any) => `- ${b.nama}`).join("<br/>")}
-                </td>
-                <td>${trx.metode}</td>
-                <td>${trx.date} ${trx.time}</td>
-                <td>
-                  ${trx.barang.map((b: any) => formatRupiah(b.harga)).join("<br/>")}
-                </td>
-                <td>
-                  ${trx.barang.map((b: any) => b.qty).join("<br/>")}
-                </td>
-                <td>${formatRupiah(trx.amount)}</td>
-              </tr>
-            `).join("")}
-          </table>
-        </body>
-      </html>
-    `;
+  // Function to reset filter
+  const resetFilter = () => {
+    setFilteredSalesHistory(allSalesHistory);
+    setFilterApplied(false);
+    setShowFilterModal(false);
+  };
 
-    const { uri } = await Print.printToFileAsync({ html });
-
-    const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
-    if (!permissions.granted) {
-      alert("Izin akses penyimpanan ditolak ❌");
+  const generatePdfAll = async (history: any[]) => {
+    if (!history || history.length === 0) {
+      alert("Tidak ada transaksi untuk diunduh");
       return;
     }
 
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+    const filterText = filterApplied 
+      ? `${MONTHS[selectedMonth].label} ${selectedYear}`
+      : "Semua Periode";
 
-    const fileName = `laporan-transaksi-${Date.now()}.pdf`;
-    const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
-      permissions.directoryUri,
-      fileName,
-      "application/pdf"
-    );
+    try {
+      const html = `
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { font-size: 18px; text-align: center; }
+              .period { text-align: center; margin-bottom: 20px; color: #666; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; font-size: 12px; text-align: left; vertical-align: top; }
+              th { background: #f1f5f9; }
+            </style>
+          </head>
+          <body>
+            <h1>Laporan Transaksi</h1>
+            <div class="period">Periode: ${filterText}</div>
+            <table>
+              <tr>
+                <th>Kode</th>
+                <th>Kasir</th>
+                <th>Nama Barang</th>
+                <th>Metode</th>
+                <th>Tanggal</th>
+                <th>Harga Satuan</th>
+                <th>Qty</th>
+                <th>Total</th>
+              </tr>
+              ${history.map(trx => `
+                <tr>
+                  <td>${trx.kode}</td>
+                  <td>${trx.kasir}</td>
+                  <td>
+                    ${trx.barang.map((b: any) => `- ${b.nama}`).join("<br/>")}
+                  </td>
+                  <td>${trx.metode}</td>
+                  <td>${trx.date} ${trx.time}</td>
+                  <td>
+                    ${trx.barang.map((b: any) => formatRupiah(b.harga)).join("<br/>")}
+                  </td>
+                  <td>
+                    ${trx.barang.map((b: any) => b.qty).join("<br/>")}
+                  </td>
+                  <td>${formatRupiah(trx.amount)}</td>
+                </tr>
+              `).join("")}
+            </table>
+          </body>
+        </html>
+      `;
 
-    await FileSystem.writeAsStringAsync(newUri, base64, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+      const { uri } = await Print.printToFileAsync({ html });
 
-    alert("PDF berhasil disimpan di folder yang kamu pilih ✅");
-  } catch (err) {
-    console.error("Gagal buat PDF:", err);
-    alert("Gagal membuat PDF ❌");
-  }
-};
- useEffect(() => {
+      const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+      if (!permissions.granted) {
+        alert("Izin akses penyimpanan ditolak ❌");
+        return;
+      }
+
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const fileName = `laporan-transaksi-${filterApplied ? `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}` : 'semua'}-${Date.now()}.pdf`;
+      const newUri = await FileSystem.StorageAccessFramework.createFileAsync(
+        permissions.directoryUri,
+        fileName,
+        "application/pdf"
+      );
+
+      await FileSystem.writeAsStringAsync(newUri, base64, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      alert("PDF berhasil disimpan di folder yang kamu pilih ✅");
+    } catch (err) {
+      console.error("Gagal buat PDF:", err);
+      alert("Gagal membuat PDF ❌");
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
   }, []);
 
@@ -179,26 +234,45 @@ const generatePdfAll = async (history: any[]) => {
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Riwayat Transaksi</Text>
-            <Text style={styles.headerSubtitle}>Kelola semua transaksi Anda</Text>
+            <Text style={styles.headerSubtitle}>
+              {filterApplied 
+                ? `${MONTHS[selectedMonth].label} ${selectedYear}` 
+                : "Semua transaksi Anda"
+              }
+            </Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.modalFooter}>
-  <TouchableOpacity
-    onPress={() => generatePdfAll(salesHistory)}
-    style={[styles.closeButton, { backgroundColor: "#059669", marginBottom: 10 }]}
-  >
-    <Text style={styles.closeButtonText}>Download PDF</Text>
-  </TouchableOpacity>
+      {/* FILTER & DOWNLOAD SECTION */}
+      <View style={styles.actionSection}>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            onPress={() => setShowFilterModal(true)}
+            style={[styles.filterButton, filterApplied && styles.filterButtonActive]}
+          >
+            <Text style={[styles.filterButtonText, filterApplied && styles.filterButtonTextActive]}>
+              📅 {filterApplied ? 'Filter Aktif' : 'Filter Bulan'}
+            </Text>
+          </TouchableOpacity>
 
-  {/* <TouchableOpacity
-    onPress={() => setShowModal(false)}
-    style={styles.closeButton}
-  >
-    <Text style={styles.closeButtonText}>Tutup</Text>
-  </TouchableOpacity> */}
-</View>
+          <TouchableOpacity
+            onPress={() => generatePdfAll(filteredSalesHistory)}
+            style={styles.downloadButton}
+          >
+            <Text style={styles.downloadButtonText}>📄 Download PDF</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {filterApplied && (
+          <TouchableOpacity
+            onPress={resetFilter}
+            style={styles.resetFilterButton}
+          >
+            <Text style={styles.resetFilterText}>✕ Hapus Filter</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* CONTENT */}
       <View style={styles.container}>
@@ -207,19 +281,24 @@ const generatePdfAll = async (history: any[]) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {salesHistory.length === 0 ? (
+          {filteredSalesHistory.length === 0 ? (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIcon}>
                 <Text style={styles.emptyIconText}>📋</Text>
               </View>
-              <Text style={styles.emptyTitle}>Belum Ada Transaksi</Text>
+              <Text style={styles.emptyTitle}>
+                {filterApplied ? 'Tidak Ada Transaksi' : 'Belum Ada Transaksi'}
+              </Text>
               <Text style={styles.emptySubtitle}>
-                Transaksi yang Anda buat akan muncul di sini
+                {filterApplied 
+                  ? `Tidak ada transaksi pada ${MONTHS[selectedMonth].label} ${selectedYear}`
+                  : 'Transaksi yang Anda buat akan muncul di sini'
+                }
               </Text>
             </View>
           ) : (
             <View style={styles.historyList}>
-              {salesHistory.map((trx) => (
+              {filteredSalesHistory.map((trx) => (
                 <TouchableOpacity
                   key={trx.id}
                   style={styles.transactionCard}
@@ -249,7 +328,89 @@ const generatePdfAll = async (history: any[]) => {
         </ScrollView>
       </View>
 
-      {/* MODAL DETAIL */}
+      {/* FILTER MODAL */}
+      <Modal visible={showFilterModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.filterModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filter Transaksi</Text>
+              <TouchableOpacity
+                onPress={() => setShowFilterModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <Text style={styles.modalCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.filterContent}>
+              {/* Month Selection */}
+              <Text style={styles.filterLabel}>Pilih Bulan:</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.monthScrollView}
+              >
+                {MONTHS.map((month) => (
+                  <TouchableOpacity
+                    key={month.value}
+                    onPress={() => setSelectedMonth(month.value)}
+                    style={[
+                      styles.monthButton,
+                      selectedMonth === month.value && styles.monthButtonSelected
+                    ]}
+                  >
+                    <Text style={[
+                      styles.monthButtonText,
+                      selectedMonth === month.value && styles.monthButtonTextSelected
+                    ]}>
+                      {month.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* Year Selection */}
+              <Text style={styles.filterLabel}>Pilih Tahun:</Text>
+              <View style={styles.yearContainer}>
+                {YEARS.map((year) => (
+                  <TouchableOpacity
+                    key={year}
+                    onPress={() => setSelectedYear(year)}
+                    style={[
+                      styles.yearButton,
+                      selectedYear === year && styles.yearButtonSelected
+                    ]}
+                  >
+                    <Text style={[
+                      styles.yearButtonText,
+                      selectedYear === year && styles.yearButtonTextSelected
+                    ]}>
+                      {year}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.filterFooter}>
+              <TouchableOpacity
+                onPress={resetFilter}
+                style={styles.resetButton}
+              >
+                <Text style={styles.resetButtonText}>Reset</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={applyFilter}
+                style={styles.applyButton}
+              >
+                <Text style={styles.applyButtonText}>Terapkan Filter</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* TRANSACTION DETAIL MODAL */}
       <Modal visible={showModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
@@ -420,6 +581,61 @@ const styles = StyleSheet.create({
     fontWeight: "400"
   },
 
+  // Action Section
+  actionSection: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  filterButton: {
+    flex: 1,
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  filterButtonActive: {
+    backgroundColor: "#dbeafe",
+  },
+  filterButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  filterButtonTextActive: {
+    color: "#1d4ed8",
+  },
+  downloadButton: {
+    flex: 1,
+    backgroundColor: "#059669",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  downloadButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  resetFilterButton: {
+    marginTop: 12,
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  resetFilterText: {
+    fontSize: 13,
+    color: "#ef4444",
+    fontWeight: "500",
+  },
+
   // Container Styles
   container: {
     flex: 1,
@@ -515,6 +731,102 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#3b82f6",
     fontWeight: "500",
+  },
+
+  // Filter Modal Styles
+  filterModalContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "70%",
+  },
+  filterContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  filterLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1e293b",
+    marginBottom: 12,
+    marginTop: 20,
+  },
+  monthScrollView: {
+    marginBottom: 10,
+  },
+  monthButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginRight: 12,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 20,
+  },
+  monthButtonSelected: {
+    backgroundColor: "#3b82f6",
+  },
+  monthButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#64748b",
+  },
+  monthButtonTextSelected: {
+    color: "#fff",
+  },
+  yearContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  yearButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: "#f1f5f9",
+    borderRadius: 12,
+    minWidth: 80,
+    alignItems: "center",
+  },
+  yearButtonSelected: {
+    backgroundColor: "#3b82f6",
+  },
+  yearButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  yearButtonTextSelected: {
+    color: "#fff",
+  },
+  filterFooter: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    gap: 12,
+  },
+  resetButton: {
+    flex: 1,
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  resetButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  applyButton: {
+    flex: 2,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#fff",
   },
 
   // Modal Styles
