@@ -49,6 +49,12 @@ const InventoryManagement = () => {
   useEffect(() => {
     fetchBarang();
     fetchKategori();
+
+    const interval = setInterval(() => {
+    fetchBarang(); // update stok tiap 5 detik
+  }, 5000);
+
+  return () => clearInterval(interval);
   }, []);
   
   // Image Picker
