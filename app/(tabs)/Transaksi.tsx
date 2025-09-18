@@ -1,10 +1,12 @@
 // app/Transaksi.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import * as Print from "expo-print";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Animated,
+  AppState,
   Dimensions,
   FlatList,
   Image,
@@ -72,6 +74,11 @@ const Transaksi: React.FC = () => {
     change: 0,
   });
 
+  // Real-time update states
+  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   useEffect(() => {
     const loadKasir = async () => {
       const name = await AsyncStorage.getItem("kasir");
@@ -83,8 +90,10 @@ const Transaksi: React.FC = () => {
   }, []);
 
   /** ==== Fetchers ==== */
-  const fetchBarang = async () => {
+  const fetchBarang = useCallback(async (silent = false) => {
     try {
+      if (!silent) setIsRefreshing(true);
+      
       const res = await api.get("/tambah/barang");
       let dataBarang: any[] = Array.isArray(res.data)
         ? res.data
@@ -98,57 +107,139 @@ const Transaksi: React.FC = () => {
           harga: parseInt(item.harga ?? item.harga_barang ?? 0, 10) || 0,
           stok: parseInt(item.stok ?? item.stok_barang ?? 0, 10) || 0,
           kategori: formatKategori(
-  item.kategori ?? item.kategori_nama ?? item.kategoriNama ?? null
-),
-          // kategori:
-          //   item.kategori ?? item.kategori_nama ?? item.kategoriNama ?? null,
+            item.kategori ?? item.kategori_nama ?? item.kategoriNama ?? null
+          ),
         }))
         .filter((item: Barang) => (item.stok ?? 0) > 0);
 
       setBarangList(mapped);
+      setLastUpdateTime(Date.now());
 
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }).start();
+      // Update cart items with new stock data
+      setCart(prevCart => {
+        return prevCart.map(cartItem => {
+          const updatedItem = mapped.find(item => item.id === cartItem.id);
+          if (updatedItem) {
+            // If cart quantity exceeds new stock, adjust it
+            const maxQuantity = Math.min(cartItem.quantity, updatedItem.stok);
+            return {
+              ...cartItem,
+              ...updatedItem,
+              price: updatedItem.harga,
+              quantity: maxQuantity
+            };
+          }
+          return cartItem;
+        }).filter(cartItem => {
+          // Remove items from cart if they're no longer available
+          const exists = mapped.some(item => item.id === cartItem.id);
+          return exists;
+        });
+      });
+
+      if (!silent) {
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }).start();
+      }
     } catch (err: any) {
       console.error(
         "Error fetching barang:",
         err?.response?.data || err?.message
       );
-      setBarangList([]);
+      if (!silent) {
+        setBarangList([]);
+      }
+    } finally {
+      if (!silent) setIsRefreshing(false);
     }
-  };
+  }, [fadeAnim]);
 
   const formatKategori = (nama: string | null | undefined) => {
     if (!nama) return "";
     const lower = nama.toString().toLowerCase();
-    return lower.charAt(0).toUpperCase() + lower.slice(1); // kapital huruf pertama
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
   };
 
-  const fetchKategori = async () => {
+  const fetchKategori = useCallback(async (silent = false) => {
     try {
       const res = await api.get("/tambah/kategori");
       const raw: any[] = Array.isArray(res.data?.data) ? res.data.data : [];
-      // const clean = raw
-      //   .map((cat: any) => (cat?.nama ?? "").toString().trim())
-      //   .filter(Boolean);
       const clean = raw
-  .map((cat: any) => formatKategori(cat?.nama))
-  .filter(Boolean);
+        .map((cat: any) => formatKategori(cat?.nama))
+        .filter(Boolean);
       const unique = Array.from(new Set(clean));
       setCategories(["Semua", ...unique]);
     } catch (err) {
       console.error("Error fetching kategori:", err);
-      setCategories(["Semua"]);
+      if (!silent) {
+        setCategories(["Semua"]);
+      }
     }
-  };
-
-  useEffect(() => {
-    fetchBarang();
-    fetchKategori();
   }, []);
+
+  const refreshData = useCallback(async (silent = true) => {
+    await Promise.all([
+      fetchBarang(silent),
+      fetchKategori(silent)
+    ]);
+  }, [fetchBarang, fetchKategori]);
+
+  // Initial data load
+  useEffect(() => {
+    refreshData(false);
+  }, [refreshData]);
+
+  // Focus effect - refresh when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      refreshData(true);
+      
+      // Set up interval for periodic refresh
+      const interval = setInterval(() => {
+        refreshData(true);
+      }, 10000); // Refresh every 10 seconds
+
+      setRefreshInterval(interval);
+
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    }, [refreshData])
+  );
+
+  // App state change effect - refresh when app becomes active
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        refreshData(true);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription?.remove();
+    };
+  }, [refreshData]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [refreshInterval]);
+
+  // Manual refresh function
+  const handleManualRefresh = useCallback(() => {
+    refreshData(false);
+  }, [refreshData]);
 
   /** ==== Derived State ==== */
   const filteredBarang = useMemo(() => {
@@ -160,7 +251,7 @@ const Transaksi: React.FC = () => {
       const matchCategory =
         selectedCategory === "Semua" ||
         itemKategori === selected ||
-        itemKategori.includes(selected); // lebih fleksibel
+        itemKategori.includes(selected);
 
       const matchSearch = (item.nama_barang ?? "").toLowerCase().includes(q);
       return matchCategory && matchSearch;
@@ -183,7 +274,7 @@ const Transaksi: React.FC = () => {
           const stokBaru = (item.stok ?? 0) - (beli.quantity ?? 0);
           return { ...item, stok: stokBaru < 0 ? 0 : stokBaru };
         })
-        .filter((item) => item.stok > 0) // otomatis hilang kalau habis
+        .filter((item) => item.stok > 0)
     );
   };
 
@@ -212,14 +303,13 @@ const Transaksi: React.FC = () => {
       const currentQuantity = idx >= 0 ? prev[idx].quantity : 0;
       const newQuantity = currentQuantity + 1;
       
-      // Check if new quantity would exceed stock
       if (newQuantity > item.stok) {
         Alert.alert(
           "Stok Tidak Mencukupi",
           `Stok ${item.nama_barang} hanya tersisa ${item.stok} item.`,
           [{ text: "OK" }]
         );
-        return prev; // Don't add to cart
+        return prev;
       }
       
       if (idx >= 0) {
@@ -276,7 +366,9 @@ const Transaksi: React.FC = () => {
   const processTransaction = async () => {
     if (cart.length === 0) return;
     
-    // Validate stock before proceeding to payment
+    // Refresh data before validating stock
+    await refreshData(true);
+    
     const stockValidation = validateStock();
     
     if (!stockValidation.isValid) {
@@ -298,7 +390,9 @@ const Transaksi: React.FC = () => {
 
   const finalizePayment = async () => {
     try {
-      // Final stock validation before processing payment
+      // Final refresh and stock validation
+      await refreshData(true);
+      
       const stockValidation = validateStock();
       
       if (!stockValidation.isValid) {
@@ -345,7 +439,6 @@ const Transaksi: React.FC = () => {
       const res = await api.post("/transaksi", payload);
       console.log("Response:", res.data);
 
-      // === CREATE RECEIPT DATA ===
       const now = new Date();
       const receipt: ReceiptData = {
         kodeTransaksi: res.data.data.kode_transaksi ?? `TRX-${Date.now()}`,
@@ -361,34 +454,29 @@ const Transaksi: React.FC = () => {
         kembalian: change,
       };
 
-      // Build HTML struk
       const html = buildReceiptHTML(receipt);
-
-      // Langsung print struk tanpa popup modal
       await Print.printAsync({ html });
 
-      // Optional: Generate PDF for backup (without auto-share)
       try {
         const file = await Print.printToFileAsync({ html });
         console.log("PDF generated:", file.uri);
-        // PDF tersimpan tapi tidak di-share otomatis
       } catch (pdfError) {
         console.log("PDF generation failed:", pdfError);
       }
 
-      // Tutup modal pembayaran
       setShowPaymentModal(false);
-
-      // Kurangi stok berdasarkan isi keranjang
       kurangiStok(cart);
-
-      // Kosongkan keranjang dan reset payment data
       setCart([]);
       setPaymentData({
         paymentMethod: "Tunai",
         cashReceived: 0,
         change: 0,
       });
+
+      // Refresh data after transaction
+      setTimeout(() => {
+        refreshData(true);
+      }, 1000);
 
       console.log("Transaksi berhasil! Struk telah dikirim ke printer.");
     } catch (error) {
@@ -537,6 +625,9 @@ const Transaksi: React.FC = () => {
           <Text style={styles.productPrice}>
             Rp {(item.harga || 0).toLocaleString("id-ID")}
           </Text>
+          <Text style={styles.stockInfo}>
+            Stok: {item.stok}
+          </Text>
         </View>
 
         <View style={styles.productActions}>
@@ -575,10 +666,28 @@ const Transaksi: React.FC = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Transaksi</Text>
-        <Text style={styles.headerSubtitle}>
-          {filteredBarang.length} produk • {cart.length} di keranjang
-        </Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.headerTitle}>Transaksi</Text>
+            <Text style={styles.headerSubtitle}>
+              {filteredBarang.length} produk • {cart.length} di keranjang
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.refreshButton, isRefreshing && styles.refreshButtonDisabled]}
+            onPress={handleManualRefresh}
+            disabled={isRefreshing}
+          >
+            <Text style={styles.refreshButtonText}>
+              {isRefreshing ? "🔄" : "⟲"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {lastUpdateTime > 0 && (
+          <Text style={styles.lastUpdateText}>
+            Update terakhir: {new Date(lastUpdateTime).toLocaleTimeString("id-ID")}
+          </Text>
+        )}
       </View>
 
       {/* Search */}
@@ -645,6 +754,8 @@ const Transaksi: React.FC = () => {
             contentContainerStyle={styles.productsGrid}
             columnWrapperStyle={styles.productRow}
             ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+            refreshing={isRefreshing}
+            onRefresh={handleManualRefresh}
           />
         ) : (
           <View style={styles.emptyContainer}>
@@ -655,6 +766,15 @@ const Transaksi: React.FC = () => {
                 ? "Coba ubah filter atau pencarian"
                 : "Belum ada produk tersedia"}
             </Text>
+            <TouchableOpacity
+              style={styles.refreshEmptyButton}
+              onPress={handleManualRefresh}
+              disabled={isRefreshing}
+            >
+              <Text style={styles.refreshEmptyButtonText}>
+                {isRefreshing ? "Memuat..." : "Refresh"}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
@@ -924,6 +1044,12 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
   headerTitle: {
     fontSize: 28,
     fontWeight: "700",
@@ -931,6 +1057,27 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerSubtitle: { fontSize: 14, color: "#666666", opacity: 0.9 },
+  refreshButton: {
+    backgroundColor: "#f0f0f0",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 40,
+    alignItems: "center",
+  },
+  refreshButtonDisabled: {
+    backgroundColor: "#e0e0e0",
+  },
+  refreshButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  lastUpdateText: {
+    fontSize: 12,
+    color: "#999999",
+    textAlign: "center",
+    marginTop: 4,
+  },
   searchSection: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 },
   searchContainer: {
     flexDirection: "row",
@@ -1007,6 +1154,12 @@ const styles = StyleSheet.create({
   },
   productCategory: { fontSize: 12, color: "#666666", marginBottom: 6 },
   productPrice: { fontSize: 16, fontWeight: "700", color: "#28a745" },
+  stockInfo: { 
+    fontSize: 12, 
+    color: "#999999", 
+    marginTop: 4,
+    fontStyle: "italic"
+  },
   productActions: { alignItems: "center" },
   quantityControls: {
     flexDirection: "row",
@@ -1056,6 +1209,18 @@ const styles = StyleSheet.create({
     color: "#999999",
     textAlign: "center",
     lineHeight: 20,
+    marginBottom: 20,
+  },
+  refreshEmptyButton: {
+    backgroundColor: "#3178e2ff",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 16,
+  },
+  refreshEmptyButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#ffffff",
   },
   cartSummary: {
     position: "absolute",
@@ -1235,115 +1400,4 @@ const styles = StyleSheet.create({
   },
   disabledButton: { backgroundColor: "#cccccc" },
   processPaymentText: { fontSize: 16, fontWeight: "600", color: "#ffffff" },
-  receiptContent: { maxHeight: 500, paddingHorizontal: 24, paddingVertical: 8 },
-  receiptHeader: { alignItems: "center", paddingVertical: 20 },
-  storeName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#000000",
-    marginBottom: 4,
-    textAlign: "center",
-    flexWrap: "wrap",
-  },
-  storeAddress: {
-    fontSize: 14,
-    color: "#000000",
-    marginBottom: 2,
-    textAlign: "center",
-    flexWrap: "wrap",
-    lineHeight: 18,
-  },
-  storeContact: { fontSize: 14, color: "#000000" },
-  receiptDivider: { height: 1, backgroundColor: "#000000", marginVertical: 16 },
-  receiptInfo: { paddingVertical: 8 },
-  receiptRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 6,
-    minHeight: 24,
-  },
-  receiptLabel: { fontSize: 14, color: "#000000", fontWeight: "500", flex: 1 },
-  receiptValue: {
-    fontSize: 14,
-    color: "#000000",
-    fontWeight: "600",
-    textAlign: "right",
-    flex: 1,
-  },
-  itemsList: { paddingVertical: 8 },
-  itemsHeader: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333333",
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  receiptItem: { marginBottom: 12 },
-  itemNameRow: { marginBottom: 4 },
-  itemName: { fontSize: 14, fontWeight: "500", color: "#333333" },
-  itemDetailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  itemDetail: { fontSize: 12, color: "#666666" },
-  itemTotal: { fontSize: 14, fontWeight: "600", color: "#333333" },
-  receiptSummary: { paddingVertical: 12 },
-  totalRowReceipt: {
-    paddingTop: 12,
-    paddingBottom: 4,
-    borderTopWidth: 1,
-    borderTopColor: "#000000",
-    marginTop: 8,
-    minHeight: 32,
-  },
-  totalLabelReceipt: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000000",
-    flex: 1,
-  },
-  totalValueReceipt: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#000000",
-    textAlign: "right",
-    flex: 1,
-  },
-  receiptPayment: { paddingVertical: 12 },
-  receiptFooter: { alignItems: "center", paddingVertical: 16 },
-  footerText: {
-    fontSize: 12,
-    color: "#666666",
-    textAlign: "center",
-    marginBottom: 2,
-  },
-  receiptActions: {
-    flexDirection: "row",
-    padding: 20,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#f0f0f0",
-  },
-  shareButton: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  shareButtonText: { fontSize: 14, fontWeight: "600", color: "#666666" },
-  newTransactionButton: {
-    flex: 1,
-    backgroundColor: "#28a745",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  newTransactionButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
 });

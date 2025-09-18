@@ -1,4 +1,4 @@
-// InventoryManagement.js - Combined Barang and Kategori Management
+// InventoryManagement.js - Combined Barang and Kategori Management (Fixed Version)
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
 import {
@@ -26,23 +26,26 @@ const InventoryManagement = () => {
   const [search, setSearch] = useState('');
   const [modalVisible, setModalVisible] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch Functions
   const fetchBarang = async () => {
     try {
       const res = await api.get('/tambah/barang');
-      setBarangList(res.data.data);
+      setBarangList(res.data.data || []);
     } catch (err) {
-      Alert.alert('Gagal memuat barang');
+      console.error('Fetch barang error:', err);
+      Alert.alert('Error', 'Gagal memuat data barang');
     }
   };
 
   const fetchKategori = async () => {
     try {
       const res = await api.get('/tambah/kategori');
-      setKategoriList(res.data.data);
+      setKategoriList(res.data.data || []);
     } catch (err) {
-      Alert.alert('Gagal memuat kategori');
+      console.error('Fetch kategori error:', err);
+      Alert.alert('Error', 'Gagal memuat data kategori');
     }
   };
 
@@ -51,65 +54,141 @@ const InventoryManagement = () => {
     fetchKategori();
 
     const interval = setInterval(() => {
-    fetchBarang(); // update stok tiap 5 detik
-  }, 5000);
+      fetchBarang(); // update stok tiap 5 detik
+    }, 5000);
 
-  return () => clearInterval(interval);
+    return () => clearInterval(interval);
   }, []);
   
-  // Image Picker
+  // Image Picker with better error handling
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-  mediaTypes: ImagePicker.MediaTypeOptions.All,
-  quality: 0.8
-});
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Izin akses galeri diperlukan untuk memilih foto.');
+        return;
+      }
 
-    if (!result.canceled) {
-      setBarangForm({ ...barangForm, gambar: result.assets[0].uri });
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+        allowsMultipleSelection: false
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedImage = result.assets[0];
+        console.log('Selected image:', selectedImage);
+        
+        // Validasi ukuran file (maksimal 5MB)
+        if (selectedImage.fileSize && selectedImage.fileSize > 5 * 1024 * 1024) {
+          Alert.alert('Error', 'Ukuran gambar terlalu besar. Maksimal 5MB.');
+          return;
+        }
+        
+        setBarangForm({ ...barangForm, gambar: selectedImage.uri });
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+      Alert.alert('Error', 'Gagal memilih gambar. Silakan coba lagi.');
     }
   };
 
-  // Barang Functions
+  // Improved Barang Submit Function
   const handleBarangSubmit = async () => {
-    if (!barangForm.nama || !barangForm.harga || !barangForm.kategori) {
-      return Alert.alert('Peringatan', 'Mohon isi semua field yang diperlukan!');
+    // Enhanced validation
+    if (!barangForm.nama?.trim()) {
+      return Alert.alert('Peringatan', 'Nama barang tidak boleh kosong!');
     }
-    const formData = new FormData();
-    formData.append('nama_barang', barangForm.nama);
-    formData.append('harga_barang', barangForm.harga);
-    formData.append('stok_barang', barangForm.stok);
-    formData.append('id_kategori', barangForm.kategori);
-    if (barangForm.gambar) {
-      formData.append('foto_barang', {
-        uri: barangForm.gambar,
-        type: 'image/jpeg',
-        name: 'barang.jpg'
-      });
+    if (!barangForm.harga || barangForm.harga === '0') {
+      return Alert.alert('Peringatan', 'Harga barang harus diisi!');
+    }
+    if (!barangForm.kategori) {
+      return Alert.alert('Peringatan', 'Kategori harus dipilih!');
     }
 
+    setIsLoading(true);
+    const formData = new FormData();
+    
     try {
-      if (editId) {
-        await api.post(`/tambah/barang/${editId}?_method=PUT`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        Alert.alert('Sukses', 'Barang berhasil diupdate!');
-      } else {
-        await api.post('/tambah/barang/store', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        Alert.alert('Sukses', 'Barang berhasil ditambahkan!');
+      // Append data with proper formatting
+      formData.append('nama_barang', barangForm.nama.trim());
+      formData.append('harga_barang', barangForm.harga.toString());
+      formData.append('stok_barang', barangForm.stok || '0');
+      formData.append('id_kategori', barangForm.kategori);
+      
+      // Handle image upload properly
+      if (barangForm.gambar && !barangForm.gambar.startsWith('http')) {
+        // For new images from picker
+        const filename = barangForm.gambar.split('/').pop() || 'barang.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+        
+        formData.append('foto_barang', {
+          uri: barangForm.gambar,
+          name: filename,
+          type: type
+        } as any);
       }
-      fetchBarang();
+
+      console.log('Sending data:', {
+        nama_barang: barangForm.nama,
+        harga_barang: barangForm.harga,
+        stok_barang: barangForm.stok,
+        id_kategori: barangForm.kategori,
+        has_image: !!barangForm.gambar && !barangForm.gambar.startsWith('http')
+      });
+
+      let response;
+      const config = {
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        },
+        timeout: 30000 // 30 seconds timeout
+      };
+
+      if (editId) {
+        response = await api.post(`/tambah/barang/${editId}?_method=PUT`, formData, config);
+      } else {
+        response = await api.post('/tambah/barang/store', formData, config);
+      }
+
+      console.log('Success response:', response.data);
+      Alert.alert('Sukses', editId ? 'Barang berhasil diupdate!' : 'Barang berhasil ditambahkan!');
+      
+      // Reset form and refresh data
       setBarangForm({ nama: '', harga: '', stok: '', kategori: '', gambar: '' });
       setEditId(null);
       setModalVisible(false);
+      await fetchBarang();
+      
     } catch (err) {
-      Alert.alert('Error', 'Gagal menyimpan barang');
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        config: err.config
+      });
+      
+      let errorMessage = 'Gagal menyimpan barang. Silakan coba lagi.';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message === 'Network Error') {
+        errorMessage = 'Masalah koneksi internet. Periksa koneksi Anda.';
+      } else if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Server tidak merespons.';
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
-      fetchBarang();
-    fetchKategori();
+      setIsLoading(false);
     }
   };
 
@@ -124,7 +203,8 @@ const InventoryManagement = () => {
             await api.delete(`/tambah/barang/${id}`);
             Alert.alert('Sukses', 'Barang berhasil dihapus!');
             fetchBarang();
-          } catch {
+          } catch (err) {
+            console.error('Delete error:', err);
             Alert.alert('Error', 'Gagal menghapus barang');
           }
         }}
@@ -132,15 +212,18 @@ const InventoryManagement = () => {
     );
   };
 
-  // Fungsi format Rupiah
-const formatRupiah = (value) => {
-  if (!value) return '';
-  // Hapus semua karakter selain angka
-  const numberString = value.replace(/[^\d]/g, '');
-  if (!numberString) return '';
-  // Format ke Rupiah
-  return 'Rp ' + parseInt(numberString, 10).toLocaleString('id-ID');
-};
+  // Improved price formatting
+  const formatRupiah = (value) => {
+    if (!value) return '';
+    const numberString = value.replace(/[^\d]/g, '');
+    if (!numberString) return '';
+    return 'Rp ' + parseInt(numberString, 10).toLocaleString('id-ID');
+  };
+
+  const handleHargaChange = (text) => {
+    const rawNumber = text.replace(/[^\d]/g, '');
+    setBarangForm({ ...barangForm, harga: rawNumber });
+  };
 
   // Kategori Functions
   const handleKategoriSubmit = async () => {
@@ -148,6 +231,7 @@ const formatRupiah = (value) => {
       return Alert.alert('Peringatan', 'Nama kategori tidak boleh kosong!');
     }
 
+    setIsLoading(true);
     const payload = {
       nama: kategoriForm.nama.trim(),
     };
@@ -166,8 +250,11 @@ const formatRupiah = (value) => {
       setEditId(null);
       setModalVisible(false);
     } catch (err) {
+      console.error('Kategori submit error:', err);
       const errorMessage = err.response?.data?.message || 'Gagal menyimpan kategori';
       Alert.alert('Error', errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -186,6 +273,7 @@ const formatRupiah = (value) => {
               Alert.alert('Sukses', 'Kategori berhasil dihapus!');
               fetchKategori();
             } catch (err) {
+              console.error('Delete kategori error:', err);
               const errorMessage = err.response?.data?.message || 'Gagal menghapus kategori';
               Alert.alert('Error', errorMessage);
             }
@@ -197,11 +285,11 @@ const formatRupiah = (value) => {
 
   // Filter Functions
   const filteredBarang = barangList.filter(b => 
-    b.nama_barang.toLowerCase().includes(search.toLowerCase())
+    b.nama_barang?.toLowerCase().includes(search.toLowerCase())
   );
 
   const filteredKategori = kategoriList.filter(kat => 
-    kat.nama.toLowerCase().includes(search.toLowerCase())
+    kat.nama?.toLowerCase().includes(search.toLowerCase())
   );
 
   // Render Functions
@@ -209,14 +297,14 @@ const formatRupiah = (value) => {
     <View style={styles.card}>
       <View style={styles.imageContainer}>
         <Image
-                    source={{
-                      uri: item.foto_barang?.startsWith('http')
-                        ? item.foto_barang
-                        : `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}`,
-                    }}
-                    style={styles.image}
-                    onError={() => console.log('Image failed to load')}
-                  />
+          source={{
+            uri: item.foto_barang?.startsWith('http')
+              ? item.foto_barang
+              : `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}`,
+          }}
+          style={styles.image}
+          onError={() => console.log('Image failed to load:', item.foto_barang)}
+        />
       </View>
       
       <View style={styles.cardContent}>
@@ -235,7 +323,7 @@ const formatRupiah = (value) => {
                 harga: item.harga_barang.toString(),
                 stok: item.stok_barang.toString(),
                 kategori: item.id_kategori?.toString() || '',
-                gambar: `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}` || ''
+                gambar: item.foto_barang ? `https://clear-gnat-certainly.ngrok-free.app/storage/${item.foto_barang}` : ''
               });
               setModalVisible(true);
             }}
@@ -258,7 +346,7 @@ const formatRupiah = (value) => {
     <View style={styles.card}>
       <View style={styles.categoryIcon}>
         <Text style={styles.categoryIconText}>
-          {item.nama.charAt(0).toUpperCase()}
+          {item.nama?.charAt(0).toUpperCase()}
         </Text>
       </View>
       
@@ -365,6 +453,11 @@ const formatRupiah = (value) => {
             </Text>
           </View>
         }
+        refreshing={isLoading}
+        onRefresh={() => {
+          fetchBarang();
+          fetchKategori();
+        }}
       />
 
       {/* Floating Action Buttons */}
@@ -393,8 +486,14 @@ const formatRupiah = (value) => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity style={styles.modalCancelButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.modalCancelText}>Batal</Text>
+            <TouchableOpacity 
+              style={styles.modalCancelButton} 
+              onPress={() => setModalVisible(false)}
+              disabled={isLoading}
+            >
+              <Text style={[styles.modalCancelText, isLoading && styles.disabledText]}>
+                Batal
+              </Text>
             </TouchableOpacity>
             
             <View style={styles.modalTitleContainer}>
@@ -409,9 +508,10 @@ const formatRupiah = (value) => {
             <TouchableOpacity 
               style={styles.modalSaveButton}
               onPress={activeTab === 'barang' ? handleBarangSubmit : handleKategoriSubmit}
+              disabled={isLoading}
             >
-              <Text style={styles.modalSaveText}>
-                {editId ? 'Update' : 'Simpan'}
+              <Text style={[styles.modalSaveText, isLoading && styles.disabledText]}>
+                {isLoading ? 'Loading...' : (editId ? 'Update' : 'Simpan')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -429,6 +529,7 @@ const formatRupiah = (value) => {
                     value={barangForm.nama}
                     onChangeText={text => setBarangForm({ ...barangForm, nama: text })}
                     placeholderTextColor="#999"
+                    editable={!isLoading}
                   />
                 </View>
 
@@ -439,13 +540,10 @@ const formatRupiah = (value) => {
                     style={styles.input}
                     placeholder="Masukkan harga"
                     value={formatRupiah(barangForm.harga)}
-                    onChangeText={(text) => {
-                      // Simpan angka mentah tanpa "Rp" dan titik ke state
-                      const rawNumber = text.replace(/[^\d]/g, '');
-                      setBarangForm({ ...barangForm, harga: rawNumber });
-                    }}
+                    onChangeText={handleHargaChange}
                     keyboardType="numeric"
                     placeholderTextColor="#999"
+                    editable={!isLoading}
                   />
                 </View>
 
@@ -459,6 +557,7 @@ const formatRupiah = (value) => {
                     onChangeText={text => setBarangForm({ ...barangForm, stok: text })}
                     keyboardType="numeric"
                     placeholderTextColor="#999"
+                    editable={!isLoading}
                   />
                 </View>
 
@@ -474,6 +573,7 @@ const formatRupiah = (value) => {
                           barangForm.kategori === kat.id.toString() && styles.categoryButtonSelected
                         ]}
                         onPress={() => setBarangForm({ ...barangForm, kategori: kat.id.toString() })}
+                        disabled={isLoading}
                       >
                         <Text style={[
                           styles.categoryButtonText,
@@ -489,8 +589,12 @@ const formatRupiah = (value) => {
                 {/* Image Picker */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Foto Barang</Text>
-                  <TouchableOpacity onPress={pickImage} style={styles.imagePickerButton}>
-                    <Text style={styles.imagePickerText}>
+                  <TouchableOpacity 
+                    onPress={pickImage} 
+                    style={[styles.imagePickerButton, isLoading && styles.disabledButton]}
+                    disabled={isLoading}
+                  >
+                    <Text style={[styles.imagePickerText, isLoading && styles.disabledText]}>
                       {barangForm.gambar ? 'Ganti Foto' : 'Pilih Foto'}
                     </Text>
                   </TouchableOpacity>
@@ -515,6 +619,7 @@ const formatRupiah = (value) => {
                     onChangeText={text => setKategoriForm({ ...kategoriForm, nama: text })}
                     placeholderTextColor="#999"
                     maxLength={50}
+                    editable={!isLoading}
                   />
                 </View>
 

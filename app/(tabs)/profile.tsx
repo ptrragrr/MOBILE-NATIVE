@@ -156,7 +156,9 @@ export default function ProfilePage() {
   const ProfileField = ({ label, value, isEditable = false, keyName, multiline = false, icon = '' }) => (
     <View style={styles.fieldContainer}>
       <View style={styles.fieldHeader}>
-        <Text style={styles.fieldIcon}>{icon}</Text>
+        <View style={styles.fieldIconBox}>
+          <Text style={styles.fieldIcon}>{icon}</Text>
+        </View>
         <Text style={styles.fieldLabel}>{label}</Text>
       </View>
       {isEditing && isEditable ? (
@@ -167,6 +169,7 @@ export default function ProfilePage() {
           multiline={multiline}
           numberOfLines={multiline ? 3 : 1}
           placeholder={`Masukkan ${label.toLowerCase()}`}
+          placeholderTextColor="#94a3b8"
         />
       ) : (
         <View style={styles.fieldValueContainer}>
@@ -180,7 +183,11 @@ export default function ProfilePage() {
     return (
       <View style={styles.loadingContainer}>
         <View style={styles.loadingCard}>
-          <Text style={styles.loadingText}>⏳ Memuat profil...</Text>
+          <View style={styles.loadingPulse}>
+            <Text style={styles.loadingIcon}>⚡</Text>
+          </View>
+          <Text style={styles.loadingText}>Memuat profil...</Text>
+          <Text style={styles.loadingSubtext}>Tunggu sebentar</Text>
         </View>
       </View>
     );
@@ -188,13 +195,17 @@ export default function ProfilePage() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Header with gradient background */}
       <View style={styles.headerGradient}>
+        <View style={styles.decorativeBlur} />
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profil Saya</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Profil Saya</Text>
+            <Text style={styles.headerSubtitle}>Kelola informasi pribadi</Text>
+          </View>
           <TouchableOpacity onPress={() => setIsEditing(!isEditing)} style={styles.editButton}>
             <Text style={styles.editIcon}>{isEditing ? '✕' : '✏️'}</Text>
           </TouchableOpacity>
@@ -202,8 +213,10 @@ export default function ProfilePage() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Profile Card */}
+        {/* Enhanced Profile Card */}
         <View style={styles.profileCard}>
+          <View style={styles.profileCardBg} />
+          
           <View style={styles.avatarSection}>
             <TouchableOpacity
               style={styles.avatarContainer}
@@ -212,9 +225,11 @@ export default function ProfilePage() {
             >
               <View style={styles.avatarBorder}>
                 <Image source={{ uri: editedData.profilePhoto }} style={styles.avatarImage} />
+                <View style={styles.avatarGlow} />
                 {isEditing && (
                   <View style={styles.editPhotoOverlay}>
-                    <Text style={styles.editPhotoIcon}>📷</Text>
+                    <Text style={styles.editPhotoIcon}>📸</Text>
+                    <Text style={styles.editPhotoText}>Ubah Foto</Text>
                   </View>
                 )}
               </View>
@@ -224,85 +239,79 @@ export default function ProfilePage() {
 
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{userData.name || 'Nama Pengguna'}</Text>
+            <View style={styles.positionBadge}>
+              <Text style={styles.profilePosition}>{userData.position || 'Pengguna'}</Text>
+            </View>
             <View style={styles.joinDateContainer}>
+              <View style={styles.joinDateIcon}>
+                <Text>📅</Text>
+              </View>
               <Text style={styles.joinDate}>Bergabung {userData.joinDate}</Text>
             </View>
           </View>
         </View>
 
-        {/* Personal Information */}
+        {/* Personal Information Section */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Informasi Pribadi</Text>
+            <View style={styles.sectionTitleContainer}>
+              <View style={styles.sectionIconBox}>
+                <Text style={styles.sectionIconText}>👤</Text>
+              </View>
+              <View>
+                <Text style={styles.sectionTitle}>Informasi Pribadi</Text>
+                <Text style={styles.sectionSubtitle}>Data personal Anda</Text>
+              </View>
+            </View>
             <View style={styles.sectionDivider} />
           </View>
           
-          <ProfileField label="Nama Lengkap" value={userData.name} isEditable keyName="name" icon="👤" />
-          <ProfileField label="Email" value={userData.email} isEditable keyName="email" icon="📧" />
-          <ProfileField label="No. Telepon" value={userData.phone} isEditable keyName="phone" icon="📱" />
+          <ProfileField label="Nama Lengkap" value={userData.name} isEditable keyName="name" icon="🏷️" />
+          <ProfileField label="Email" value={userData.email} isEditable keyName="email" icon="✉️" />
+          <ProfileField label="No. Telepon" value={userData.phone} isEditable keyName="phone" icon="📞" />
         </View>
-
-        {/* Admin Management Section - Only show for admin */}
-        {/* {userData.position?.toLowerCase().includes('admin') && !isEditing && (
-          <View style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Manajemen Sistem</Text>
-              <View style={styles.sectionDivider} />
-            </View>
-
-            <View style={styles.actionButtonsContainer}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/user')}
-              >
-                <View style={styles.actionButtonContent}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: '#3b82f6' }]}>
-                    <Text style={styles.actionIcon}>👥</Text>
-                  </View>
-                  <View style={styles.actionTextContainer}>
-                    <Text style={styles.actionText}>Kelola User</Text>
-                    <Text style={styles.actionSubtext}>Tambah, edit, hapus pengguna</Text>
-                  </View>
-                  <Text style={styles.actionArrow}>›</Text>
-                </View>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/role')}
-              >
-                <View style={styles.actionButtonContent}>
-                  <View style={[styles.actionIconContainer, { backgroundColor: '#8b5cf6' }]}>
-                    <Text style={styles.actionIcon}>🎭</Text>
-                  </View>
-                  <View style={styles.actionTextContainer}>
-                    <Text style={styles.actionText}>Kelola Role</Text>
-                    <Text style={styles.actionSubtext}>Atur peran dan tingkatan</Text>
-                  </View>
-                  <Text style={styles.actionArrow}>›</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )} */}
 
         {/* Action Buttons */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pengaturan Akun</Text>
+            <View style={styles.sectionTitleContainer}>
+              <View style={styles.sectionIconBox}>
+                <Text style={styles.sectionIconText}>⚙️</Text>
+              </View>
+              <View>
+                <Text style={styles.sectionTitle}>Pengaturan Akun</Text>
+                <Text style={styles.sectionSubtitle}>Kelola akun Anda</Text>
+              </View>
+            </View>
             <View style={styles.sectionDivider} />
           </View>
 
           {isEditing ? (
             <View style={styles.editActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
-                <Text style={styles.cancelIcon}>✕</Text>
+              {/* <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
+                <View style={styles.buttonIconContainer}>
+                  <Text style={styles.cancelIcon}>✕</Text>
+                </View>
                 <Text style={styles.cancelButtonText}>Batal</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-                <Text style={styles.saveIcon}>✓</Text>
+              </TouchableOpacity> */}
+              <TouchableOpacity style={[styles.baseButton, styles.cancelButton]} onPress={handleCancelEdit}>
+  <View style={styles.buttonIconContainer}>
+    <Text style={styles.cancelIcon}>✕</Text>
+  </View>
+  <Text style={styles.cancelButtonText}>Batal</Text>
+</TouchableOpacity>
+<TouchableOpacity style={[styles.baseButton, styles.saveButton]} onPress={handleSaveProfile}>
+  <View style={styles.buttonIconContainer}>
+    <Text style={styles.saveIcon}>✓</Text>
+  </View>
+  <Text style={styles.saveButtonText}>Simpan</Text>
+</TouchableOpacity>
+              {/* <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
+                <View style={styles.buttonIconContainer}>
+                  <Text style={styles.saveIcon}>✓</Text>
+                </View>
                 <Text style={styles.saveButtonText}>Simpan</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           ) : (
             <View style={styles.actionButtonsContainer}>
@@ -314,8 +323,13 @@ export default function ProfilePage() {
                   <View style={[styles.actionIconContainer, styles.logoutIconContainer]}>
                     <Text style={styles.actionIcon}>🚪</Text>
                   </View>
-                  <Text style={[styles.actionText, styles.logoutText]}>Logout</Text>
-                  <Text style={[styles.actionArrow, styles.logoutArrow]}>›</Text>
+                  <View style={styles.actionTextContainer}>
+                    <Text style={[styles.actionText, styles.logoutText]}>Keluar dari Akun</Text>
+                    <Text style={styles.actionSubtext}>Logout dari aplikasi</Text>
+                  </View>
+                  <View style={styles.actionArrowContainer}>
+                    <Text style={[styles.actionArrow, styles.logoutArrow]}>→</Text>
+                  </View>
                 </View>
               </TouchableOpacity>
             </View>
@@ -325,20 +339,25 @@ export default function ProfilePage() {
         <View style={styles.bottomPadding} />
       </ScrollView>
 
-      {/* Logout Modal */}
+      {/* Enhanced Logout Modal */}
       {showLogoutModal && (
         <View style={styles.modalOverlay}>
           <View style={styles.logoutModalContainer}>
             <View style={styles.logoutModalHeader}>
               <View style={styles.logoutIconCircle}>
-                <Text style={styles.logoutModalIcon}>👋</Text>
+                <View style={styles.logoutIconInner}>
+                  <Text style={styles.logoutModalIcon}>👋</Text>
+                </View>
+              </View>
+              <View style={styles.modalHeaderText}>
+                <Text style={styles.logoutModalTitle}>Konfirmasi Logout</Text>
+                <Text style={styles.logoutModalSubtitle}>Sampai jumpa lagi!</Text>
               </View>
             </View>
             
             <View style={styles.logoutModalContent}>
-              <Text style={styles.logoutModalTitle}>Yakin Logout?</Text>
               <Text style={styles.logoutModalMessage}>
-                Kamu akan keluar dari aplikasi dan perlu login lagi untuk mengakses akun.
+                Anda akan keluar dari aplikasi dan perlu login kembali untuk mengakses akun Anda.
               </Text>
             </View>
             
@@ -347,7 +366,10 @@ export default function ProfilePage() {
                 <Text style={styles.stayButtonText}>Batal</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.logoutConfirmButton} onPress={handleLogout}>
-                <Text style={styles.logoutConfirmText}>Logout</Text>
+                <View style={styles.logoutConfirmIcon}>
+                  <Text>🚪</Text>
+                </View>
+                <Text style={styles.logoutConfirmText}>Ya, Logout</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -360,40 +382,72 @@ export default function ProfilePage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
   },
   
-  // Loading
+  // Enhanced Loading
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f1f5f9',
     padding: 20,
   },
   loadingCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+    minWidth: 200,
+  },
+  loadingPulse: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  loadingIcon: {
+    fontSize: 24,
+    color: '#ffffff',
   },
   loadingText: {
-    fontSize: 16,
+    fontSize: 18,
+    color: '#1e293b',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  loadingSubtext: {
+    fontSize: 14,
     color: '#64748b',
-    fontWeight: '500',
   },
 
-  // Header
+  // Enhanced Header
   headerGradient: {
-    backgroundColor: '#ffffffff',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    backgroundColor: '#667eea',
     paddingTop: 50,
-    paddingBottom: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  decorativeBlur: {
+    position: 'absolute',
+    top: -50,
+    right: -50,
+    width: 150,
+    height: 150,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 75,
   },
   header: {
     flexDirection: 'row',
@@ -402,317 +456,425 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#dc3545',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    backdropFilter: 'blur(10px)',
   },
   backIcon: {
-    fontSize: 20,
+    fontSize: 22,
     color: '#ffffff',
     fontWeight: 'bold',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#000000ff',
-  },
-  editButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#007bff',
-    justifyContent: 'center',
+  headerCenter: {
+    flex: 1,
     alignItems: 'center',
   },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  editButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backdropFilter: 'blur(10px)',
+  },
   editIcon: {
-    fontSize: 16,
+    fontSize: 18,
     color: '#ffffff',
   },
 
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
-    marginTop: -10,
+    marginTop: -16,
   },
 
-  // Profile Card
+  // Enhanced Profile Card
   profileCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    paddingTop: 40,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    borderRadius: 24,
+    paddingTop: 48,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+    marginBottom: 24,
     alignItems: 'center',
-    shadowColor: '#394655ff',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 24,
+    elevation: 15,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  profileCardBg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+    backgroundColor: 'rgba(102, 126, 234, 0.05)',
   },
   avatarSection: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   avatarContainer: {
     position: 'relative',
   },
   avatarBorder: {
-    padding: 4,
-    borderRadius: 60,
+    padding: 6,
+    borderRadius: 68,
     backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 12,
+    position: 'relative',
+  },
+  avatarGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 68,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    zIndex: -1,
   },
   avatarImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#a6abc0ff',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#e2e8f0',
   },
   editPhotoOverlay: {
     position: 'absolute',
-    top: 4,
-    left: 4,
-    right: 4,
-    bottom: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    borderRadius: 50,
+    top: 6,
+    left: 6,
+    right: 6,
+    bottom: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
   },
   editPhotoIcon: {
-    fontSize: 24,
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  editPhotoText: {
+    fontSize: 12,
     color: '#ffffff',
+    fontWeight: '600',
   },
   statusIndicator: {
     position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    bottom: 12,
+    right: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: '#10b981',
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: '#ffffff',
   },
   profileInfo: {
     alignItems: 'center',
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 26,
+    fontWeight: '800',
     color: '#1e293b',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
   },
   positionBadge: {
-    backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    backgroundColor: 'rgba(102, 126, 234, 0.15)',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     borderRadius: 20,
-    marginBottom: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(102, 126, 234, 0.2)',
   },
   profilePosition: {
     fontSize: 14,
     color: '#667eea',
-    fontWeight: '600',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   joinDateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   joinDateIcon: {
-    fontSize: 14,
-    marginRight: 6,
+    marginRight: 8,
   },
   joinDate: {
-    fontSize: 13,
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+
+  // Enhanced Section
+  sectionContainer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  sectionHeader: {
+    marginBottom: 24,
+  },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  sectionIconText: {
+    fontSize: 18,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1e293b',
+    marginBottom: 2,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
     color: '#64748b',
     fontWeight: '500',
   },
-
-  // Section
-  sectionContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  sectionHeader: {
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: 8,
-  },
   sectionDivider: {
-    height: 2,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 1,
+    height: 3,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    borderRadius: 2,
   },
 
-  // Fields
+  // Enhanced Fields
   fieldContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   fieldHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  fieldIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   fieldIcon: {
     fontSize: 16,
-    marginRight: 8,
   },
   fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
   },
   fieldValueContainer: {
     backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   fieldValue: {
     fontSize: 16,
     color: '#1e293b',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   fieldInput: {
     fontSize: 16,
     color: '#1e293b',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
     backgroundColor: '#ffffff',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 2,
     borderColor: '#667eea',
-    fontWeight: '500',
+    fontWeight: '600',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   multilineInput: {
-    height: 80,
+    height: 90,
     textAlignVertical: 'top',
   },
 
-  // Actions
+  // Enhanced Actions
   editActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
   },
+  baseButton: {
+  flex: 1,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 16,
+  paddingVertical: 18,
+  gap: 10,
+},
   cancelButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+  backgroundColor: '#f1f5f9',
+  borderWidth: 2,
+  borderColor: '#e2e8f0',
+},
+  buttonIconContainer: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
-    paddingVertical: 16,
-    gap: 8,
+    backgroundColor: 'rgba(100, 116, 139, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cancelIcon: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#64748b',
+    fontWeight: 'bold',
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#64748b',
   },
   saveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#007bff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-    gap: 8,
-  },
+  backgroundColor: '#667eea',
+  shadowColor: '#667eea',
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.4,
+  shadowRadius: 12,
+  elevation: 8,
+},
   saveIcon: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#ffffff',
+    fontWeight: 'bold',
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#ffffff',
   },
 
   actionButtonsContainer: {
-    gap: 12,
+    gap: 16,
   },
   actionButton: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   actionButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   actionIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#007bff',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#667eea',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   actionIcon: {
-    fontSize: 18,
+    fontSize: 20,
   },
   actionTextContainer: {
     flex: 1,
   },
   actionText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
     color: '#1e293b',
+    marginBottom: 2,
   },
   actionSubtext: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748b',
-    marginTop: 2,
+    fontWeight: '500',
+  },
+  actionArrowContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   actionArrow: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#94a3b8',
     fontWeight: 'bold',
   },
   logoutButton: {
-    backgroundColor: '#fef2f2',
+    backgroundColor: '#fef7f7',
     borderColor: '#fecaca',
   },
   logoutIconContainer: {
     backgroundColor: '#ef4444',
+    shadowColor: '#ef4444',
   },
   logoutText: {
     color: '#dc2626',
@@ -722,110 +884,146 @@ const styles = StyleSheet.create({
   },
 
   bottomPadding: {
-    height: 20,
+    height: 30,
   },
 
-  // Modals
+  // Enhanced Modals
   modalOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 100,
     paddingHorizontal: 20,
   },
 
-  // Logout Modal
+  // Enhanced Logout Modal
   logoutModalContainer: {
     backgroundColor: '#ffffff',
-    borderRadius: 24,
+    borderRadius: 28,
     width: '100%',
-    maxWidth: 360,
+    maxWidth: 380,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.25,
-    shadowRadius: 25,
-    elevation: 25,
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 30,
   },
   logoutModalHeader: {
     alignItems: 'center',
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingTop: 48,
+    paddingBottom: 24,
     backgroundColor: '#f8fafc',
+    position: 'relative',
   },
   logoutIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#667eea',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowRadius: 20,
+    elevation: 15,
+    marginBottom: 16,
+  },
+  logoutIconInner: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logoutModalIcon: {
-    fontSize: 36,
+    fontSize: 32,
   },
-  logoutModalContent: {
-    paddingHorizontal: 24,
-    paddingVertical: 20,
+  modalHeaderText: {
     alignItems: 'center',
   },
   logoutModalTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#1e293b',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  logoutModalSubtitle: {
+    fontSize: 16,
+    color: '#667eea',
+    fontWeight: '600',
+  },
+  logoutModalContent: {
+    paddingHorizontal: 28,
+    paddingVertical: 24,
+    alignItems: 'center',
   },
   logoutModalMessage: {
     fontSize: 16,
     color: '#64748b',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
+    fontWeight: '500',
   },
   logoutModalActions: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    gap: 16,
     backgroundColor: '#f8fafc',
   },
   stayButton: {
     flex: 1,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 16,
-    paddingVertical: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 18,
+    paddingVertical: 18,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   stayButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#64748b',
   },
   logoutConfirmButton: {
     flex: 1,
     backgroundColor: '#ef4444',
-    borderRadius: 16,
-    paddingVertical: 16,
+    borderRadius: 18,
+    paddingVertical: 18,
     alignItems: 'center',
     shadowColor: '#ef4444',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  logoutConfirmIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logoutConfirmText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#ffffff',
   },
 });
