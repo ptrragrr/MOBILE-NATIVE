@@ -15,7 +15,7 @@ import { AuthContext } from '../../context/AuthContext';
 import api from '../axios';
 
 const formatRupiah = (angka: number) => {
-  return new Intl.NumberFormat('id-ID', {
+  return new Intl.NumberFormat('id-ID', { 
     style: 'currency',
     currency: 'IDR',
     minimumFractionDigits: 0,

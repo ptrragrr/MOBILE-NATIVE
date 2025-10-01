@@ -1,6 +1,5 @@
 // app/AuthStack/LoginScreen.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useContext, useState } from 'react';
 import {
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { AuthContext } from '../../context/AuthContext';
 import api from '../axios';
 
@@ -26,12 +26,12 @@ export default function LoginScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [focusedInput, setFocusedInput] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
   const handleLogin = async () => {
     if (!username || !password) {
-      Alert.alert('Error', 'Username dan password harus diisi');
+      Alert.alert('Error', 'Email dan password harus diisi');
       return;
     }
 
@@ -51,7 +51,6 @@ export default function LoginScreen() {
 
         console.log('Login success:', response.data);
         
-        // Pop-up berhasil login
         Alert.alert(
           '🎉 Berhasil!',
           'Anda berhasil login',
@@ -78,364 +77,290 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      <LinearGradient
-        colors={['#fafafa', '#f5f5f5', '#efefef']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradient}
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFB5B5" translucent={false} />
+      
+      {/* Top Pink Section with Wave */}
+      <View style={styles.topSection}>
+        {/* Decorative Pattern */}
+        <View style={styles.patternContainer}>
+          {[...Array(6)].map((_, i) => (
+            <View key={i} style={[styles.decorativeCircle, { 
+              top: Math.random() * 200,
+              left: Math.random() * width,
+              opacity: 0.1 + Math.random() * 0.15
+            }]} />
+          ))}
+        </View>
+
+        {/* Wave SVG */}
+        <Svg
+          height="100"
+          width={width}
+          viewBox={`0 0 ${width} 100`}
+          style={styles.wave}
+        >
+          <Path
+            d={`M0,50 Q${width/4},20 ${width/2},50 T${width},50 L${width},100 L0,100 Z`}
+            fill="#FFFFFF"
+          />
+        </Svg>
+      </View>
+
+      <KeyboardAvoidingView 
+        style={styles.keyboardView} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView 
           contentContainerStyle={styles.scrollContainer}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          scrollEnabled={true}
         >
           <View style={styles.content}>
-            {/* Decorative Elements */}
-            <View style={styles.decorativeCircle1} />
-            <View style={styles.decorativeCircle2} />
-            <View style={styles.decorativeCircle3} />
-
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <View style={styles.logo}>
-                  <Text style={styles.logoText}>🔒</Text>
-                </View>
-              </View>
-              <Text style={styles.welcomeText}>Selamat Datang Kembali!</Text>
-              <Text style={styles.subtitle}>Login untuk melanjutkan pekerjaanmu</Text>
-            </View>
+            {/* Sign In Title */}
+            <Text style={styles.signInTitle}>Sign in</Text>
 
             {/* Form Container */}
             <View style={styles.formContainer}>
-              <View style={styles.form}>
-                {/* Username Input */}
-                <View style={styles.inputContainer}>
-                  <Text style={[
-                    styles.inputLabel,
-                    focusedInput === 'username' && styles.inputLabelFocused
-                  ]}>
-                    Username
-                  </Text>
+              {/* Email Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>✉️</Text>
                   <TextInput
-                    style={[
-                      styles.inputSimple,
-                      focusedInput === 'username' && styles.inputSimpleFocused
-                    ]}
-                    placeholder="Masukkan username"
-                    placeholderTextColor="#9ca3af"
+                    style={styles.input}
+                    placeholder="demo@email.com"
+                    placeholderTextColor="#B0B0B0"
                     value={username}
                     onChangeText={setUsername}
-                    onFocus={() => setFocusedInput('username')}
-                    onBlur={() => setFocusedInput('')}
                     autoCapitalize="none"
                     autoCorrect={false}
                     returnKeyType="next"
-                    editable={true}
+                    keyboardType="email-address"
                   />
                 </View>
+              </View>
 
-                {/* Password Input */}
-                <View style={styles.inputContainer}>
-                  <Text style={[
-                    styles.inputLabel,
-                    focusedInput === 'password' && styles.inputLabelFocused
-                  ]}>
-                    Password
-                  </Text>
+              {/* Password Input */}
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>🔒</Text>
                   <TextInput
-                    style={[
-                      styles.inputSimple,
-                      focusedInput === 'password' && styles.inputSimpleFocused
-                    ]}
-                    placeholder="Masukkan password"
-                    placeholderTextColor="#9ca3af"
+                    style={styles.input}
+                    placeholder="**********"
+                    placeholderTextColor="#B0B0B0"
                     secureTextEntry
                     value={password}
                     onChangeText={setPassword}
-                    onFocus={() => setFocusedInput('password')}
-                    onBlur={() => setFocusedInput('')}
                     autoCorrect={false}
                     returnKeyType="done"
                     onSubmitEditing={handleLogin}
-                    editable={true}
                   />
                 </View>
+              </View>
 
-                {/* Login Button */}
-                <TouchableOpacity
-                  style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-                  onPress={handleLogin}
-                  disabled={loading}
-                  activeOpacity={0.8}
+              {/* Remember Me & Forgot Password */}
+              {/* <View style={styles.optionsRow}>
+                <TouchableOpacity 
+                  style={styles.rememberMeContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                  activeOpacity={0.7}
                 >
-                  <LinearGradient
-                    colors={loading ? ['#e5e7eb', '#d1d5db'] : ['#374151', '#1f2937']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.buttonGradient}
-                  >
-                    <Text style={styles.loginButtonText}>
-                      {loading ? '⏳ Loading...' : 'Login'}
-                    </Text>
-                  </LinearGradient>
+                  <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                    {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.rememberMeText}>Remember Me</Text>
                 </TouchableOpacity>
 
-                {/* Divider */}
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>or</Text>
-                  <View style={styles.dividerLine} />
-                </View>
+                <TouchableOpacity activeOpacity={0.7}>
+                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                </TouchableOpacity>
+              </View> */}
 
-                {/* Additional Options */}
-                <View style={styles.additionalOptions}>
-                  <TouchableOpacity style={styles.optionButton}>
-                    <Text style={styles.optionText}>Forgot Password?</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
+              {/* Login Button */}
+              <TouchableOpacity
+                style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                onPress={handleLogin}
+                disabled={loading}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.loginButtonText}>
+                  {loading ? 'Loading...' : 'Login'}
+                </Text>
+              </TouchableOpacity>
 
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Secure • Reliable • Fast
-              </Text>
-              <Text style={styles.copyrightText}>
-                © 2025 KasirQU
-              </Text>
+              {/* Footer Text */}
+              {/* <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                  Don't have an account?{' '}
+                  <Text style={styles.signUpLink}>Sign up</Text>
+                </Text>
+              </View> */}
             </View>
           </View>
         </ScrollView>
-      </LinearGradient>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  gradient: {
+  topSection: {
+    height: 250,
+    backgroundColor: '#007bff',
+    position: 'relative',
+  },
+  patternContainer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  decorativeCircle: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FFFFFF',
+  },
+  wave: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  keyboardView: {
     flex: 1,
   },
   scrollContainer: {
     flexGrow: 1,
-    minHeight: height,
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingTop: StatusBar.currentHeight || 44,
-    paddingBottom: 24,
-  },
-  
-  // Decorative Elements
-  decorativeCircle1: {
-    position: 'absolute',
-    top: -50,
-    right: -50,
-    width: 180,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(0, 0, 0, 0.02)',
-  },
-  decorativeCircle2: {
-    position: 'absolute',
-    top: 100,
-    left: -30,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 0, 0, 0.03)',
-  },
-  decorativeCircle3: {
-    position: 'absolute',
-    bottom: 150,
-    right: -20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    paddingHorizontal: 28,
+    paddingTop: 20,
   },
 
-  // Header
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoContainer: {
-    marginBottom: 20,
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  logoText: {
+  // Title
+  signInTitle: {
     fontSize: 32,
-  },
-  welcomeText: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#1f2937',
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#6b7280',
-    textAlign: 'center',
-    fontWeight: '400',
+    fontWeight: '700',
+    color: '#2D2D2D',
+    marginBottom: 32,
   },
 
   // Form
   formContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 28,
-    marginHorizontal: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#f3f4f6',
-  },
-  form: {
     width: '100%',
   },
   inputContainer: {
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-    marginLeft: 2,
-  },
-  inputLabelFocused: {
-    color: '#1f2937',
-  },
-  
-  // Input Styles - Simplified
-  inputSimple: {
-    backgroundColor: '#f9fafb',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
     fontSize: 15,
-    color: '#1f2937',
-    fontWeight: '400',
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    minHeight: 50,
-  },
-  inputSimpleFocused: {
-    borderColor: '#9ca3af',
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-
-  // Button
-  loginButton: {
-    borderRadius: 12,
-    marginTop: 8,
-    shadowColor: '#4a90e2',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  loginButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  buttonGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  loginButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    color: '#2D2D2D',
+    marginBottom: 8,
   },
-
-  // Divider
-  divider: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    backgroundColor: '#F8F8F8',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+    paddingHorizontal: 16,
+    height: 56,
   },
-  dividerLine: {
+  inputIcon: {
+    fontSize: 18,
+    marginRight: 12,
+  },
+  input: {
     flex: 1,
-    height: 1,
-    backgroundColor: '#e5e7eb',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    color: '#9ca3af',
-    fontSize: 13,
+    fontSize: 15,
+    color: '#2D2D2D',
     fontWeight: '400',
   },
 
-  // Additional Options
-  additionalOptions: {
+  // Options Row
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  rememberMeContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  optionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#D0D0D0',
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  optionText: {
-    color: '#6b7280',
+  checkboxChecked: {
+    backgroundColor: '#FFB5B5',
+    borderColor: '#FFB5B5',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  rememberMeText: {
     fontSize: 14,
+    color: '#666666',
     fontWeight: '500',
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#FF8A8A',
+    fontWeight: '600',
+  },
+
+  // Login Button
+  loginButton: {
+    backgroundColor: '#007bff',
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+    // shadowColor: '#FFB5B5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 
   // Footer
   footer: {
     alignItems: 'center',
-    marginTop: 32,
-    paddingTop: 16,
+    marginTop: 24,
   },
   footerText: {
-    color: '#9ca3af',
-    fontSize: 13,
+    color: '#666666',
+    fontSize: 14,
     fontWeight: '400',
-    marginBottom: 6,
   },
-  copyrightText: {
-    color: '#d1d5db',
-    fontSize: 12,
-    fontWeight: '300',
+  signUpLink: {
+    color: '#007bff',
+    fontWeight: '700',
   },
 });

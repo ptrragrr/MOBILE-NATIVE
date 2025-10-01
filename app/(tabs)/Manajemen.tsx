@@ -608,13 +608,13 @@ const InventoryManagement = () => {
               </>
             ) : (
               // Kategori Form
-              <>
+              <>            
                 {/* Nama Kategori */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Nama Kategori *</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="Contoh: Elektronik, Pakaian, Makanan"
+                    placeholder="Contoh: Makanan, Minuman"
                     value={kategoriForm.nama}
                     onChangeText={text => setKategoriForm({ ...kategoriForm, nama: text })}
                     placeholderTextColor="#999"

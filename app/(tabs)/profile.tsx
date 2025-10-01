@@ -207,7 +207,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#4F46E5" />
+        <StatusBar barStyle="light-content" backgroundColor="#007bff" />
         <View style={styles.loadingContent}>
           <View style={styles.spinner}>
             <View style={styles.spinnerInner} />
@@ -263,9 +263,11 @@ export default function ProfilePage() {
               <View style={styles.onlineIndicator} />
             </TouchableOpacity>
             
-            <Text style={styles.userName}>{userData.name || 'Pengguna'}</Text>
+     <Text style={styles.userName}>
+  {editedData.name || 'Users'}
+</Text>
             <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{userData.position || 'User'}</Text>
+              <Text style={styles.roleText}>{userData.position || 'Role'}</Text>
             </View>
           </View>
         </View>
